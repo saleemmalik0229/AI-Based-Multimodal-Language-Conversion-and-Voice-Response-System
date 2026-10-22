@@ -1,6 +1,7 @@
 /**
  * Browser MediaRecorder audio recording helper module.
  * Dynamically detects browser supported audio MIME types.
+ * Provides user-friendly error messages — never exposes internal details.
  */
 
 export class AudioRecorder {
@@ -31,9 +32,22 @@ export class AudioRecorder {
     return 'audio/webm';
   }
 
+  /**
+   * Returns true if MediaRecorder API is available in this browser.
+   */
+  public static isSupported(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      !!navigator.mediaDevices?.getUserMedia &&
+      typeof MediaRecorder !== 'undefined'
+    );
+  }
+
   public async start(): Promise<boolean> {
-    if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      throw new Error('Microphone recording is not supported in this browser.');
+    if (!AudioRecorder.isSupported()) {
+      throw new Error(
+        'Voice input isn\'t supported in this browser. You can still type your message.'
+      );
     }
 
     try {
@@ -53,10 +67,38 @@ export class AudioRecorder {
       return true;
     } catch (err: any) {
       this.cleanup();
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        throw new Error('Microphone permission was denied. Please allow microphone access.');
+
+      if (
+        err.name === 'NotAllowedError' ||
+        err.name === 'PermissionDeniedError' ||
+        err.message?.includes('Permission denied')
+      ) {
+        throw new Error(
+          'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
+        );
       }
-      throw new Error('Failed to start audio recording. Please check your microphone.');
+
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        throw new Error(
+          'No microphone was found. Please connect a microphone and try again.'
+        );
+      }
+
+      if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        throw new Error(
+          'Your microphone is currently in use by another application. Please close it and try again.'
+        );
+      }
+
+      if (err.name === 'OverconstrainedError') {
+        throw new Error(
+          'Microphone constraints could not be satisfied. Please try a different microphone.'
+        );
+      }
+
+      throw new Error(
+        'Could not start recording. Please check your microphone and try again.'
+      );
     }
   }
 
@@ -64,7 +106,7 @@ export class AudioRecorder {
     return new Promise((resolve, reject) => {
       if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
         this.cleanup();
-        reject(new Error('Audio recorder is not active.'));
+        reject(new Error('Recording session expired. Please try recording again.'));
         return;
       }
 
@@ -75,7 +117,11 @@ export class AudioRecorder {
         this.cleanup();
 
         if (audioBlob.size === 0) {
-          reject(new Error('Recorded audio is empty. Please speak clearly into the microphone.'));
+          reject(
+            new Error(
+              'No audio was captured. Please speak clearly into the microphone and try again.'
+            )
+          );
         } else {
           resolve({ blob: audioBlob, mimeType });
         }
@@ -83,9 +129,9 @@ export class AudioRecorder {
 
       try {
         this.mediaRecorder.stop();
-      } catch (err: any) {
+      } catch {
         this.cleanup();
-        reject(new Error('Error stopping audio recorder: ' + err.message));
+        reject(new Error('Recording stopped unexpectedly. Please try again.'));
       }
     });
   }

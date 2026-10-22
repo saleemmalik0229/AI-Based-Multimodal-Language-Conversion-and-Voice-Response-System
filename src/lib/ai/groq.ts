@@ -10,17 +10,29 @@ export interface GroqTranslationResult {
 
 export class GroqService {
   private groq: Groq | null = null;
-  private readonly defaultSttModel = 'whisper-large-v3-turbo';
+  private readonly defaultSttModel = 'whisper-large-v3';
 
-  constructor() {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (apiKey && apiKey.trim() !== '') {
-      this.groq = new Groq({ apiKey });
+  private getClient(): Groq {
+    if (!this.groq) {
+      const apiKey = process.env.GROQ_API_KEY;
+      if (apiKey && apiKey.trim() !== '') {
+        this.groq = new Groq({ apiKey });
+      }
     }
+    if (!this.groq) {
+      console.error('[GroqService Error]: GROQ_API_KEY is missing or invalid on the server.');
+      throw new Error('Groq service is not properly configured. Please check server environment.');
+    }
+    return this.groq;
   }
 
   public isConfigured(): boolean {
-    return this.groq !== null;
+    try {
+      this.getClient();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -39,10 +51,7 @@ export class GroqService {
       throw new Error(`Unsupported target language: ${targetLanguage}`);
     }
 
-    if (!this.groq) {
-      console.error('[GroqService Error]: GROQ_API_KEY is missing or invalid on the server.');
-      throw new Error('Groq translation service is not properly configured. Please check server environment.');
-    }
+    const groqClient = this.getClient();
 
     const modelName = process.env.GROQ_TRANSLATION_MODEL;
     if (!modelName || modelName.trim() === '') {
@@ -84,7 +93,7 @@ Return your response in STRICT JSON format matching this exact schema:
   "translatedText": "The translated text in ${targetLanguage}"
 }`;
 
-      const response = await this.groq.chat.completions.create({
+      const response = await groqClient.chat.completions.create({
         model: modelName,
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
@@ -130,35 +139,107 @@ Return your response in STRICT JSON format matching this exact schema:
   }
 
   /**
-   * Transcribes recorded audio buffer using Groq Whisper (whisper-large-v3-turbo).
-   * Preserves native spoken language text.
+   * Transcribes recorded audio buffer using Groq Whisper.
+   * Uses multilingual script priming and script verification to ensure accurate
+   * native script transcription across English, Telugu, Hindi, Tamil, and Malayalam.
    */
   public async transcribeAudio(
     audioBuffer: Buffer,
     mimeType: string,
     filename: string = 'recording.webm'
   ): Promise<{ text: string }> {
-    if (!this.groq) {
-      console.error('[GroqService Error]: GROQ_API_KEY is missing on the server.');
-      throw new Error('Groq speech-to-text service is not configured.');
-    }
+    const groqClient = this.getClient();
 
     if (!audioBuffer || audioBuffer.length === 0) {
       throw new Error('Audio recording is empty.');
     }
 
     const modelName = process.env.GROQ_STT_MODEL || this.defaultSttModel;
+    const initialPrompt = 'English, తెలుగు, हिन्दी, தமிழ், മലയാളം.';
+
+    // Script configuration for supported Indic languages
+    const indicScriptConfigs: Record<
+      string,
+      { code: 'te' | 'hi' | 'ta' | 'ml'; scriptRegex: RegExp; prompt: string }
+    > = {
+      telugu: {
+        code: 'te',
+        scriptRegex: /[\u0C00-\u0C7F]/,
+        prompt: 'తెలుగులో మాట్లాడటం.',
+      },
+      hindi: {
+        code: 'hi',
+        scriptRegex: /[\u0900-\u097F]/,
+        prompt: 'हिन्दी में बातचीत.',
+      },
+      tamil: {
+        code: 'ta',
+        scriptRegex: /[\u0B80-\u0BFF]/,
+        prompt: 'தமிழில் பேசுவது.',
+      },
+      malayalam: {
+        code: 'ml',
+        scriptRegex: /[\u0D00-\u0D7F]/,
+        prompt: 'മലയാളത്തിൽ സംസാരിക്കുന്നത്.',
+      },
+    };
+
+    const sttLangMap: Record<string, string> = {
+      telugu: 'telugu',
+      te: 'telugu',
+      hindi: 'hindi',
+      hi: 'hindi',
+      tamil: 'tamil',
+      ta: 'tamil',
+      malayalam: 'malayalam',
+      ml: 'malayalam',
+      english: 'english',
+      en: 'english',
+    };
 
     try {
       const fileObj = await toFile(audioBuffer, filename, { type: mimeType });
 
-      const transcription = await this.groq.audio.transcriptions.create({
+      const transcription = await groqClient.audio.transcriptions.create({
         file: fileObj,
         model: modelName,
-        response_format: 'json',
+        prompt: initialPrompt,
+        response_format: 'verbose_json',
       });
 
-      const text = (transcription.text || '').trim();
+      let text = (transcription.text || '').trim();
+      const detectedLangRaw = (((transcription as any).language || '') as string).toLowerCase().trim();
+      const normalizedLang = sttLangMap[detectedLangRaw];
+
+      // If an Indic language is detected, verify that the transcription uses its authentic script
+      // without cross-script pollution (e.g. Devanagari script for Telugu or Tamil script for Malayalam)
+      if (normalizedLang && indicScriptConfigs[normalizedLang]) {
+        const config = indicScriptConfigs[normalizedLang];
+        const hasCorrectScript = config.scriptRegex.test(text);
+
+        // Check for presence of characters from any other Indic script
+        const hasOtherIndicScript = Object.entries(indicScriptConfigs)
+          .filter(([key]) => key !== normalizedLang)
+          .some(([_, other]) => other.scriptRegex.test(text));
+
+        // If expected script is absent or foreign Indic script is present, re-transcribe with forced language code and script prompt
+        if (!hasCorrectScript || hasOtherIndicScript) {
+          const fileObjRefined = await toFile(audioBuffer, filename, { type: mimeType });
+          const refinedTranscription = await groqClient.audio.transcriptions.create({
+            file: fileObjRefined,
+            model: modelName,
+            language: config.code,
+            prompt: config.prompt,
+            response_format: 'json',
+          });
+
+          const refinedText = (refinedTranscription.text || '').trim();
+          if (refinedText) {
+            text = refinedText;
+          }
+        }
+      }
+
       if (!text) {
         throw new Error('No speech recognized in the audio recording.');
       }

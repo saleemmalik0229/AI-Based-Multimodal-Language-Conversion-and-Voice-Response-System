@@ -1,14 +1,64 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --bg-main: #F6F8FC;
+  --surface: #FFFFFF;
+  --surface-elevated: #F1F5F9;
+  --surface-hover: #F8FAFC;
+  --text-primary: #172033;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-subtle: rgba(37, 99, 235, 0.08);
+  --border: #E2E8F0;
+  --border-subtle: #F1F5F9;
+  --success: #15803D;
+  --success-subtle: rgba(21, 128, 61, 0.08);
+  --error: #DC2626;
+  --error-subtle: rgba(220, 38, 38, 0.08);
+  --input-bg: #FFFFFF;
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+  --shadow-panel: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+}
+
+.dark {
+  --bg-main: #080D19;
+  --surface: #111827;
+  --surface-elevated: #172033;
+  --surface-hover: #1E293B;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --accent: #60A5FA;
+  --accent-hover: #93C5FD;
+  --accent-subtle: rgba(96, 165, 250, 0.12);
+  --border: #293548;
+  --border-subtle: #1E293B;
+  --success: #4ADE80;
+  --success-subtle: rgba(74, 222, 128, 0.12);
+  --error: #F87171;
+  --error-subtle: rgba(248, 113, 113, 0.12);
+  --input-bg: #111827;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-panel: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+}
+
+html {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-main);
+  color: var(--text-primary);
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 /* Custom Scrollbars */
@@ -18,16 +68,28 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
+  background: var(--border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(37, 99, 235, 0.8);
+  background: var(--text-muted);
+}
+
+/* Focus Ring Utility */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Selection Color */
+::selection {
+  background-color: var(--accent);
+  color: #FFFFFF;
 }
 
 /* Accessibility: Respect Reduced Motion */

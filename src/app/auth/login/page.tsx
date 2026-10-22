@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Languages, KeyRound, Mail, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,39 +47,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-blue-600 selection:text-white relative">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 selection:bg-[var(--accent)] selection:text-white relative transition-colors duration-150">
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
         {/* App Logo */}
         <div className="flex justify-center">
-          <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
-            <Languages className="w-6 h-6 text-white" />
-          </div>
+          <Link
+            href="/translator"
+            className="w-11 h-11 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-sm text-white"
+          >
+            <Languages className="w-6 h-6" />
+          </Link>
         </div>
 
-        <h2 className="mt-6 text-center text-2xl font-bold text-slate-100 tracking-tight">
+        <h2 className="mt-5 text-center text-2xl font-bold text-[var(--text-primary)] tracking-tight">
           Welcome back
         </h2>
-        <p className="mt-2 text-center text-xs text-slate-400">
-          Sign in to your AI Voice & Text Translator workspace
+        <p className="mt-1 text-center text-xs text-[var(--text-secondary)]">
+          Sign in to your AI Voice &amp; Text Translator workspace
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <div className="bg-slate-900 border border-slate-800 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md z-10">
+        <div className="bg-[var(--surface)] border border-[var(--border)] py-8 px-5 shadow-sm rounded-xl sm:px-10 transition-colors duration-150">
           {error && (
-            <div className="mb-6 p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-start gap-3 text-xs">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="mb-5 p-3 rounded-lg bg-[var(--error-subtle)] border border-[var(--error)]/20 text-[var(--error)] flex items-start gap-2.5 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--text-muted)]">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -87,25 +96,25 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  className="block w-full pl-10 pr-3 py-2 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
                 />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                   Password
                 </label>
                 <Link
                   href="/auth/forgot-password"
-                  className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs font-medium text-[var(--accent)] hover:underline transition-colors"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--text-muted)]">
                   <KeyRound className="w-4 h-4" />
                 </div>
                 <input
@@ -114,16 +123,16 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  className="block w-full pl-10 pr-3 py-2 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
                 />
               </div>
             </div>
 
-            <div>
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-semibold rounded-lg text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 {isLoading ? (
                   <>
@@ -140,12 +149,12 @@ export default function LoginPage() {
             </div>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
-            <p className="text-xs text-slate-400">
+          <div className="mt-6 pt-5 border-t border-[var(--border)] text-center">
+            <p className="text-xs text-[var(--text-secondary)]">
               Don&apos;t have an account?{' '}
               <Link
                 href="/auth/register"
-                className="font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                className="font-semibold text-[var(--accent)] hover:underline transition-colors"
               >
                 Sign up
               </Link>
@@ -156,4 +165,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

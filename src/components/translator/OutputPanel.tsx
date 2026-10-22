@@ -11,8 +11,13 @@ import {
   AlertCircle,
   Globe,
   Languages,
+  Play,
+  Pause,
+  Square,
+  AlertTriangle,
 } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from '@/types';
+import { TTSPlaybackState } from '@/lib/speech/tts';
 
 interface OutputPanelProps {
   translatedText: string;
@@ -24,8 +29,11 @@ interface OutputPanelProps {
   onClear: () => void;
   isVoiceOutputEnabled: boolean;
   setIsVoiceOutputEnabled: (enabled: boolean) => void;
-  onSpeak: () => void;
-  isSpeaking: boolean;
+  onSpeakControl: () => void;
+  onStopSpeech: () => void;
+  ttsState: TTSPlaybackState;
+  isTtsSupported: boolean;
+  ttsError: string | null;
 }
 
 export const OutputPanel: React.FC<OutputPanelProps> = ({
@@ -38,8 +46,11 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
   onClear,
   isVoiceOutputEnabled,
   setIsVoiceOutputEnabled,
-  onSpeak,
-  isSpeaking,
+  onSpeakControl,
+  onStopSpeech,
+  ttsState,
+  isTtsSupported,
+  ttsError,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -50,64 +61,120 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback copy
+      // Clipboard fallback
     }
   };
 
+  // Playback button config
+  const getPlayButtonConfig = () => {
+    if (ttsState === 'speaking') {
+      return {
+        label: 'Pause',
+        icon: <Pause className="w-3.5 h-3.5" />,
+        className:
+          'bg-[var(--accent)] text-white border-[var(--accent)] hover:bg-[var(--accent-hover)] shadow-sm',
+        title: 'Pause speech',
+      };
+    }
+    if (ttsState === 'paused') {
+      return {
+        label: 'Resume',
+        icon: <Play className="w-3.5 h-3.5 fill-current" />,
+        className:
+          'bg-amber-600 hover:bg-amber-500 text-white border-amber-600 shadow-sm',
+        title: 'Resume speech',
+      };
+    }
+    // idle
+    return {
+      label: 'Play',
+      icon: <Play className="w-3.5 h-3.5 fill-current" />,
+      className:
+        'bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] border-[var(--border)] disabled:opacity-40 disabled:cursor-not-allowed',
+      title: 'Listen to translation',
+    };
+  };
+
+  const playConfig = getPlayButtonConfig();
+  const canPlay = !!translatedText && !isLoading && isTtsSupported;
+  const isActivelyPlaying = ttsState === 'speaking' || ttsState === 'paused';
+
   return (
-    <div className="h-full flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl transition-all duration-200">
+    <div className="h-full flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-sm transition-colors duration-150">
       {/* Top Bar Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800 mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Languages className="w-3.5 h-3.5 text-blue-500" />
-            Target Language
-          </span>
-          {/* Target Language Dropdown - Exactly 5 Languages */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-[var(--border)] mb-4">
+        {/* Target Language Selector */}
+        <div className="flex items-center gap-2.5">
+          <label
+            htmlFor="target-language-select"
+            className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5"
+          >
+            <Languages className="w-3.5 h-3.5 text-[var(--accent)]" />
+            <span>Target</span>
+          </label>
           <select
+            id="target-language-select"
             value={targetLanguage}
             onChange={(e) => setTargetLanguage(e.target.value as SupportedLanguage)}
-            className="bg-slate-950 text-slate-100 font-semibold text-xs border border-slate-700/80 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"
+            className="bg-[var(--surface-elevated)] text-[var(--text-primary)] font-semibold text-xs border border-[var(--border)] rounded-lg px-3 py-1.5 outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors cursor-pointer"
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
-              <option key={lang} value={lang} className="bg-slate-900 text-slate-100">
+              <option
+                key={lang}
+                value={lang}
+                className="bg-[var(--surface)] text-[var(--text-primary)]"
+              >
                 {lang}
               </option>
             ))}
           </select>
         </div>
 
+        {/* Header Right Actions */}
         <div className="flex items-center gap-2">
-          {/* Auto-Speech Output Switch */}
+          {/* Voice Output Toggle */}
           <button
+            type="button"
             onClick={() => setIsVoiceOutputEnabled(!isVoiceOutputEnabled)}
+            disabled={!isTtsSupported}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
-              isVoiceOutputEnabled
-                ? 'bg-blue-600/10 text-blue-400 border-blue-500/30'
-                : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-300'
+              !isTtsSupported
+                ? 'bg-[var(--surface-elevated)] text-[var(--text-muted)] border-[var(--border)] cursor-not-allowed opacity-60'
+                : isVoiceOutputEnabled
+                ? 'bg-[var(--accent-subtle)] text-[var(--accent)] border-[var(--accent)]/30 hover:bg-[var(--accent-subtle)]'
+                : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] border-[var(--border)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
             }`}
-            title="Toggle automatic speech synthesis after translation"
+            title={
+              !isTtsSupported
+                ? 'Speech synthesis is not supported in this browser'
+                : isVoiceOutputEnabled
+                ? 'Voice output is ON — click to disable'
+                : 'Voice output is OFF — click to enable'
+            }
+            aria-pressed={isVoiceOutputEnabled}
           >
-            {isVoiceOutputEnabled ? (
+            {isVoiceOutputEnabled && isTtsSupported ? (
               <>
-                <Volume2 className="w-3.5 h-3.5 text-blue-400" />
-                <span>Auto Audio On</span>
+                <Volume2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <span>Voice ON</span>
               </>
             ) : (
               <>
                 <VolumeX className="w-3.5 h-3.5" />
-                <span>Auto Audio Off</span>
+                <span>Voice OFF</span>
               </>
             )}
           </button>
 
           {translatedText && (
             <button
+              type="button"
               onClick={onClear}
-              className="text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+              className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 px-2 py-1 rounded-md hover:bg-[var(--surface-elevated)] border border-transparent hover:border-[var(--border)] transition-colors"
               title="Clear output"
             >
               <RotateCcw className="w-3.5 h-3.5" />
+              <span className="sr-only">Clear output</span>
             </button>
           )}
         </div>
@@ -115,79 +182,139 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
 
       {/* Detected Source Language Banner */}
       {detectedLanguage && !error && !isLoading && (
-        <div className="mb-3 px-3 py-1.5 rounded-lg bg-blue-950/40 border border-blue-800/50 text-blue-300 flex items-center gap-2 text-xs font-medium">
-          <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-          <span>Detected language: <strong className="text-white font-semibold">{detectedLanguage}</strong></span>
+        <div className="mb-3 px-3.5 py-1.5 rounded-lg bg-[var(--accent-subtle)] border border-[var(--accent)]/20 text-[var(--accent)] flex items-center gap-2 text-xs font-medium">
+          <Globe className="w-3.5 h-3.5 shrink-0 text-[var(--accent)]" />
+          <span>
+            Detected language:{' '}
+            <strong className="font-semibold text-[var(--text-primary)]">{detectedLanguage}</strong>
+          </span>
         </div>
       )}
 
-      {/* Main Translation Result Container */}
+      {/* Main Translation Content Area */}
       <div className="relative flex-1 flex flex-col min-h-[260px]">
-        {/* Error State Banner */}
         {error ? (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-start gap-3 my-auto">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-xl bg-[var(--error-subtle)] border border-[var(--error)]/20 text-[var(--error)] flex items-start gap-3 my-auto">
+            <AlertCircle className="w-5 h-5 text-[var(--error)] shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-sm font-semibold text-rose-200">Translation Notice</h4>
-              <p className="text-xs text-rose-300/90 mt-0.5 leading-relaxed">{error}</p>
+              <h4 className="text-sm font-semibold">Translation Notice</h4>
+              <p className="text-xs mt-1 leading-relaxed opacity-90">{error}</p>
             </div>
           </div>
         ) : isLoading ? (
-          /* Loading State */
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400 py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="text-sm font-medium animate-pulse">Translating into {targetLanguage}...</span>
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[var(--text-secondary)] py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
+            <span className="text-sm font-medium animate-pulse">
+              Translating into {targetLanguage}...
+            </span>
           </div>
         ) : translatedText ? (
-          /* Output Result Text */
-          <div className="flex-1 text-slate-100 font-medium text-lg leading-relaxed whitespace-pre-wrap p-1 select-text">
+          <div className="flex-1 text-[var(--text-primary)] font-medium text-lg leading-relaxed whitespace-pre-wrap p-1 select-text">
             {translatedText}
+            {/* Inline pulse indicator during playback */}
+            {ttsState === 'speaking' && (
+              <span className="inline-flex items-center gap-1 ml-2 text-[var(--accent)] text-xs font-normal align-middle">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse [animation-delay:0.15s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse [animation-delay:0.3s]" />
+              </span>
+            )}
           </div>
         ) : (
-          /* Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-500 gap-2 py-12">
-            <Globe className="w-8 h-8 text-slate-700 mb-1" />
-            <p className="text-sm font-medium text-slate-400">Your translation will appear here</p>
-            <p className="text-xs text-slate-600 max-w-xs">
-              Select your target language and click Translate to convert text or audio.
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-[var(--text-muted)] gap-2 py-12">
+            <div className="w-10 h-10 rounded-full bg-[var(--surface-elevated)] flex items-center justify-center text-[var(--text-muted)] mb-1">
+              <Globe className="w-5 h-5" />
+            </div>
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              Your translation will appear here
+            </p>
+            <p className="text-xs text-[var(--text-secondary)] max-w-xs">
+              Select your target language and click PROCEED to convert text or voice.
             </p>
           </div>
         )}
       </div>
 
+      {/* TTS Unsupported Banner */}
+      {!isTtsSupported && (
+        <div className="mt-3 flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <p className="leading-relaxed">
+            Voice playback is not available in this browser. You can still read and copy the translation.
+          </p>
+        </div>
+      )}
+
+      {/* TTS Error Banner */}
+      {ttsError && !isLoading && (
+        <div className="mt-3 flex items-start gap-2 px-3.5 py-2.5 rounded-lg bg-[var(--error-subtle)] border border-[var(--error)]/20 text-[var(--error)] text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">{ttsError}</p>
+        </div>
+      )}
+
       {/* Bottom Controls Bar */}
-      <div className="pt-4 border-t border-slate-800 flex items-center justify-between mt-auto">
-        {/* Audio Playback Control */}
+      <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between gap-3 mt-auto">
+        {/* Audio Playback Controls */}
         <div className="flex items-center gap-2">
+          {/* Play / Pause / Resume */}
           <button
-            onClick={onSpeak}
-            disabled={!translatedText || isLoading}
-            className={`px-3 py-2 rounded-lg border transition-all flex items-center gap-2 text-xs font-semibold ${
-              isSpeaking
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-slate-800 hover:bg-slate-700/80 text-slate-200 border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
-            }`}
-            title="Listen to audio translation"
+            onClick={onSpeakControl}
+            type="button"
+            disabled={!canPlay}
+            className={`px-3 py-2 rounded-lg border transition-all duration-150 flex items-center gap-2 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${playConfig.className}`}
+            title={playConfig.title}
           >
-            <Volume2 className="w-3.5 h-3.5 text-blue-400" />
-            <span>{isSpeaking ? 'Speaking...' : 'Listen'}</span>
+            {playConfig.icon}
+            <span>{playConfig.label}</span>
           </button>
+
+          {/* Stop button (visible when playing/paused) */}
+          {isActivelyPlaying && (
+            <button
+              onClick={onStopSpeech}
+              type="button"
+              className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all flex items-center gap-1.5 text-xs font-medium"
+              title="Stop playback"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+              <span>Stop</span>
+            </button>
+          )}
+
+          {/* Speaking status label */}
+          {ttsState === 'speaking' && (
+            <span className="text-xs text-[var(--accent)] font-medium flex items-center gap-1">
+              Speaking...
+            </span>
+          )}
+          {ttsState === 'paused' && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              Paused
+            </span>
+          )}
         </div>
 
         {/* Copy Button */}
         <button
           onClick={handleCopy}
+          type="button"
           disabled={!translatedText || isLoading}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          className={`px-3.5 py-2 border rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+            copied
+              ? 'bg-[var(--success-subtle)] border-[var(--success)]/40 text-[var(--success)]'
+              : 'bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed'
+          }`}
+          title="Copy translation"
         >
           {copied ? (
             <>
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-400">Copied</span>
+              <Check className="w-3.5 h-3.5 text-[var(--success)]" />
+              <span>Copied</span>
             </>
           ) : (
             <>
-              <Copy className="w-3.5 h-3.5 text-slate-400" />
+              <Copy className="w-3.5 h-3.5" />
               <span>Copy</span>
             </>
           )}
@@ -196,4 +323,3 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
     </div>
   );
 };
-

@@ -13,7 +13,7 @@ export default async function TranslatorPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)] font-sans selection:bg-[var(--accent)] selection:text-white transition-colors duration-150">
       <Navbar user={session} />
       <main className="flex-1 flex flex-col">
         <TranslatorWorkspace />
@@ -22,4 +22,3 @@ export default async function TranslatorPage() {
     </div>
   );
 }
-
