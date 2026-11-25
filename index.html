@@ -1,0 +1,3105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Voice &amp; Text Translator - Multimodal Language Conversion</title>
+  <meta name="description" content="Translate text or voice across English, Telugu, Hindi, Tamil, and Malayalam with automatic language detection and voice response." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563EB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m5 8 6 6'/><path d='m4 14 6-6 2-3'/><path d='M2 5h12'/><path d='M7 2h1'/><path d='m22 22-5-10-5 10'/><path d='M14 18h6'/></svg>" />
+  <style>
+    /* ==========================================================================
+       THEME VARIABLES & CSS RESET (Matching Tailwind CSS v4 design tokens)
+       ========================================================================== */
+    :root {
+      --bg-main: #F6F8FC;
+      --surface: #FFFFFF;
+      --surface-elevated: #F1F5F9;
+      --surface-hover: #F8FAFC;
+      --text-primary: #172033;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+      --accent: #2563EB;
+      --accent-hover: #1D4ED8;
+      --accent-subtle: rgba(37, 99, 235, 0.08);
+      --border: #E2E8F0;
+      --border-subtle: #F1F5F9;
+      --success: #15803D;
+      --success-subtle: rgba(21, 128, 61, 0.08);
+      --error: #DC2626;
+      --error-subtle: rgba(220, 38, 38, 0.08);
+      --input-bg: #FFFFFF;
+      --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+      --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+      --shadow-panel: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html.dark {
+      --bg-main: #080D19;
+      --surface: #111827;
+      --surface-elevated: #172033;
+      --surface-hover: #1E293B;
+      --text-primary: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --accent: #60A5FA;
+      --accent-hover: #93C5FD;
+      --accent-subtle: rgba(96, 165, 250, 0.12);
+      --border: #293548;
+      --border-subtle: #1E293B;
+      --success: #4ADE80;
+      --success-subtle: rgba(74, 222, 128, 0.12);
+      --error: #F87171;
+      --error-subtle: rgba(248, 113, 113, 0.12);
+      --input-bg: #111827;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+      --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+      --shadow-panel: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 14px;
+      line-height: 1.5;
+      transition: background-color 0.2s ease, color 0.2s ease;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+
+    ::selection {
+      background-color: var(--accent);
+      color: #FFFFFF;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+    input, select, textarea {
+      font-family: inherit;
+    }
+
+    /* Focus visibility */
+    *:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Container Utility */
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    @media (min-width: 640px) {
+      .container { padding: 0 24px; }
+    }
+    @media (min-width: 1024px) {
+      .container { padding: 0 32px; }
+    }
+
+    /* ==========================================================================
+       HEADER & NAVIGATION
+       ========================================================================== */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    .header-content {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background-color: var(--accent);
+      color: #FFFFFF;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+      transition: background-color 0.15s;
+      flex-shrink: 0;
+    }
+    .brand-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Backend Endpoint Pill / Badge */
+    .backend-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-md);
+      background-color: var(--surface-elevated);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .backend-pill:hover {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+    .backend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--success);
+      flex-shrink: 0;
+    }
+    .backend-dot.disconnected {
+      background-color: var(--error);
+    }
+    .backend-dot.connecting {
+      background-color: #F59E0B;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px;
+      border-radius: var(--radius-md);
+      background-color: var(--surface-elevated);
+      border: 1px solid var(--border);
+    }
+    .theme-btn {
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .theme-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .theme-btn:hover {
+      color: var(--text-primary);
+    }
+    .theme-btn.active {
+      background-color: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* User Profile & Auth Nav */
+    .auth-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-signin {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-radius: var(--radius-md);
+      transition: all 0.15s;
+    }
+    .btn-signin:hover {
+      color: var(--text-primary);
+      background-color: var(--surface-elevated);
+    }
+    .btn-signup {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #FFFFFF;
+      background-color: var(--accent);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      transition: background-color 0.15s;
+    }
+    .btn-signup:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .user-menu-wrapper {
+      position: relative;
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .user-pill:hover {
+      background-color: var(--surface-hover);
+    }
+    .user-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: var(--radius-sm);
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .user-menu-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 240px;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-panel);
+      padding: 8px;
+      z-index: 60;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .user-menu-dropdown.show {
+      display: flex;
+    }
+    .dropdown-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .dropdown-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dropdown-email {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+    .dropdown-name {
+      font-size: 11px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-radius: var(--radius-md);
+    }
+    .dropdown-item.active-badge {
+      color: var(--success);
+    }
+    .dropdown-logout-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--error);
+      border-radius: var(--radius-md);
+      transition: background-color 0.15s;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .dropdown-logout-btn:hover {
+      background-color: var(--error-subtle);
+    }
+
+    /* ==========================================================================
+       MAIN WORKSPACE LAYOUT
+       ========================================================================== */
+    .main-content {
+      flex: 1;
+      padding: 24px 0 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Workspace Subheader */
+    .workspace-subheader {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    @media (min-width: 640px) {
+      .workspace-subheader {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+    .subheader-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .subheader-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .btn-reset-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background-color: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 6px 12px;
+      align-self: flex-start;
+      transition: all 0.15s;
+    }
+    .btn-reset-all:hover {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+
+    /* 50 / 50 Desktop Split Grid */
+    .translator-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      flex: 1;
+      min-height: 520px;
+      align-items: stretch;
+    }
+    @media (min-width: 1024px) {
+      .translator-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* Translator Panel Card */
+    .translator-panel {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 480px;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    /* Panel Header Bar */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .panel-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .lang-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .lang-badge.detected {
+      background-color: var(--accent-subtle);
+      border-color: rgba(37, 99, 235, 0.2);
+      color: var(--accent);
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .lang-badge.detected .badge-dot {
+      background-color: var(--accent);
+    }
+
+    .btn-clear-panel {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s;
+    }
+    .btn-clear-panel:hover {
+      color: var(--text-primary);
+      background-color: var(--surface-elevated);
+    }
+
+    /* Target Language Selector */
+    .target-lang-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .target-lang-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .target-select {
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 6px 12px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .target-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    /* Voice Output Toggle */
+    .voice-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .voice-toggle-btn.active {
+      background-color: var(--accent-subtle);
+      border-color: rgba(37, 99, 235, 0.3);
+      color: var(--accent);
+    }
+    .voice-toggle-btn:hover:not(.active) {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+
+    /* Warning & Error Banners */
+    .alert-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .alert-banner.warning {
+      background-color: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      color: #B45309;
+    }
+    html.dark .alert-banner.warning {
+      color: #FCD34D;
+    }
+    .alert-banner.error {
+      background-color: var(--error-subtle);
+      border: 1px solid rgba(220, 38, 38, 0.25);
+      color: var(--error);
+    }
+    .alert-banner.info {
+      background-color: var(--accent-subtle);
+      border: 1px solid rgba(37, 99, 235, 0.25);
+      color: var(--accent);
+    }
+    .alert-banner svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Detected Source Language Banner */
+    .detected-source-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      background-color: var(--accent-subtle);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .detected-source-banner strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Content Area (Textarea & Translation Display) */
+    .content-area {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 260px;
+    }
+
+    .input-textarea {
+      width: 100%;
+      flex: 1;
+      background: transparent;
+      color: var(--text-primary);
+      border: none;
+      resize: none;
+      outline: none;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 4px;
+    }
+    .input-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Live Recording Status Overlay Pill */
+    .live-recording-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--error-subtle);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      color: var(--error);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(4px);
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--error);
+      animation: pulse 1s infinite;
+    }
+
+    .converting-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--accent-subtle);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      color: var(--accent);
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(4px);
+    }
+
+    /* Output Content States */
+    .output-text {
+      flex: 1;
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.65;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      padding: 4px;
+      user-select: text;
+    }
+    .tts-pulse {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .tts-pulse span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--accent);
+      animation: pulse 1s infinite;
+    }
+    .tts-pulse span:nth-child(2) { animation-delay: 0.2s; }
+    .tts-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+    .output-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--text-muted);
+    }
+    .empty-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: var(--surface-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .empty-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .empty-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      max-width: 300px;
+    }
+
+    .output-loading {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+      color: var(--text-secondary);
+      gap: 12px;
+    }
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+    .loading-text {
+      font-size: 14px;
+      font-weight: 500;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Panel Bottom Bar */
+    .panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    .char-count {
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--text-muted);
+    }
+
+    /* Buttons */
+    .btn-mic {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+    .btn-mic:hover:not(:disabled) {
+      background-color: var(--surface-hover);
+    }
+    .btn-mic.recording {
+      background-color: var(--error);
+      color: #FFFFFF;
+      border-color: var(--error);
+      animation: pulse 1.5s infinite;
+    }
+    .btn-mic.processing {
+      background-color: var(--accent);
+      color: #FFFFFF;
+      border-color: var(--accent);
+      cursor: wait;
+      opacity: 0.85;
+    }
+    .btn-mic.success {
+      background-color: var(--success-subtle);
+      color: var(--success);
+      border-color: rgba(21, 128, 61, 0.3);
+    }
+    .btn-mic.error {
+      background-color: var(--error-subtle);
+      color: var(--error);
+      border-color: rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-proceed {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      background-color: var(--accent);
+      color: #FFFFFF;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s;
+    }
+    .btn-proceed:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+    .btn-proceed:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-play {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+    .btn-play:hover:not(:disabled) {
+      background-color: var(--surface-hover);
+    }
+    .btn-play:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-play.speaking {
+      background-color: var(--accent);
+      color: #FFFFFF;
+      border-color: var(--accent);
+    }
+    .btn-play.paused {
+      background-color: #D97706;
+      color: #FFFFFF;
+      border-color: #D97706;
+    }
+
+    .btn-stop-tts {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .btn-stop-tts:hover {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+
+    .tts-status-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .btn-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background-color: var(--surface-elevated);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .btn-copy:hover:not(:disabled) {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+    .btn-copy:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-copy.copied {
+      background-color: var(--success-subtle);
+      border-color: rgba(21, 128, 61, 0.3);
+      color: var(--success);
+    }
+
+    /* ==========================================================================
+       MODALS & OVERLAYS (Auth, Backend Settings, Terms, Privacy)
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.15s ease-out;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-box {
+      width: 100%;
+      max-width: 440px;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-panel);
+      padding: 24px;
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .modal-close-btn:hover {
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .auth-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .form-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .input-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px 10px 38px;
+      background-color: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .btn-submit-form {
+      width: 100%;
+      padding: 10px 16px;
+      background-color: var(--accent);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.15s;
+      margin-top: 18px;
+    }
+    .btn-submit-form:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+    .btn-submit-form:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    /* Footer */
+    .footer {
+      width: 100%;
+      background-color: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 20px 0;
+      margin-top: auto;
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    .footer-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    @media (min-width: 640px) {
+      .footer-content {
+        flex-direction: row;
+      }
+    }
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .footer-link {
+      color: var(--text-secondary);
+      transition: color 0.15s;
+      cursor: pointer;
+    }
+    .footer-link:hover {
+      color: var(--text-primary);
+      text-decoration: underline;
+    }
+
+    /* Keyframe Animations */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       TOP HEADER & NAVIGATION
+       ======================================================================== -->
+  <header class="header">
+    <div class="container header-content">
+      <!-- App Brand -->
+      <div class="brand" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="AI Voice &amp; Text Translator">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">AI Voice &amp; Text Translator</span>
+          <span class="brand-subtitle">Five Languages Supported</span>
+        </div>
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="header-actions">
+        <!-- Backend Status Pill (Click to configure) -->
+        <button type="button" id="backendPillBtn" class="backend-pill" title="Click to view or change the backend API endpoint">
+          <span class="backend-dot" id="backendDot"></span>
+          <span id="backendStatusLabel">Backend</span>
+        </button>
+
+        <!-- Theme Toggle (Light / System / Dark) -->
+        <div class="theme-toggle" role="group" aria-label="Theme selector">
+          <button type="button" class="theme-btn" id="themeBtnLight" title="Light mode" aria-label="Light mode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          </button>
+          <button type="button" class="theme-btn" id="themeBtnSystem" title="System preference" aria-label="System preference">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          </button>
+          <button type="button" class="theme-btn" id="themeBtnDark" title="Dark mode" aria-label="Dark mode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </button>
+        </div>
+
+        <!-- Auth Navigation & User Dropdown -->
+        <div id="unauthNav" class="auth-nav">
+          <button type="button" class="btn-signin" id="navSignInBtn">Sign In</button>
+          <button type="button" class="btn-signup" id="navSignUpBtn">Get Started</button>
+        </div>
+
+        <div id="authNav" class="user-menu-wrapper" style="display: none;">
+          <button type="button" class="user-pill" id="userMenuToggleBtn" aria-haspopup="true">
+            <span class="user-avatar" id="userAvatarLetter">U</span>
+            <span id="userNameDisplay" style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">User</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+
+          <div class="user-menu-dropdown" id="userDropdown">
+            <div class="dropdown-header">
+              <span class="dropdown-label">Signed in as</span>
+              <p class="dropdown-email" id="dropdownEmail">user@example.com</p>
+              <p class="dropdown-name" id="dropdownName">User Name</p>
+            </div>
+            <div class="dropdown-item active-badge">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Account Active
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <button type="button" class="dropdown-logout-btn" id="logoutBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+              <span>Log out</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN TRANSLATOR WORKSPACE
+       ======================================================================== -->
+  <main class="main-content container">
+
+    <!-- Workspace Subheader -->
+    <div class="workspace-subheader">
+      <div>
+        <h1 class="subheader-title">AI Voice &amp; Text Translator</h1>
+        <p class="subheader-desc">
+          Translate text or voice across English, Telugu, Hindi, Tamil, and Malayalam with automatic language detection.
+        </p>
+      </div>
+      <button type="button" id="resetAllBtn" class="btn-reset-all" style="display: none;" title="Reset all inputs and outputs">
+        <span>↺</span>
+        <span>Reset All</span>
+      </button>
+    </div>
+
+    <!-- Global Connection Notice (if backend is unreachable or CORS blocked) -->
+    <div id="connectionWarningBanner" class="alert-banner warning" style="display: none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+      <div>
+        <strong>Backend Connectivity Notice:</strong>
+        <span id="connectionWarningText">Unable to reach backend API.</span>
+        <a href="#" id="editBackendLink" style="text-decoration: underline; font-weight: 600; margin-left: 6px;">Configure Backend URL</a>
+      </div>
+    </div>
+
+    <!-- 50% LEFT / 50% RIGHT DESKTOP SPLIT GRID -->
+    <div class="translator-grid">
+
+      <!-- ====================================================================
+           LEFT PANEL: INPUT (TEXT / VOICE)
+           ==================================================================== -->
+      <div class="translator-panel">
+        <!-- Input Header -->
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <span class="panel-title">Input</span>
+            <span class="lang-badge" id="sourceDetectedPill">
+              <span class="badge-dot"></span>
+              <span id="sourceDetectedLabel">Source language detected automatically</span>
+            </span>
+          </div>
+          <button type="button" class="btn-clear-panel" id="clearInputBtn" style="display: none;" title="Clear input text">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span>Clear</span>
+          </button>
+        </div>
+
+        <!-- Mic Unsupported Banner -->
+        <div class="alert-banner warning" id="micUnsupportedBanner" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+          <span>Voice input is not supported in this browser. You can still type your text below.</span>
+        </div>
+
+        <!-- Text Input Area -->
+        <div class="content-area">
+          <textarea
+            id="inputTextarea"
+            class="input-textarea"
+            maxlength="5000"
+            placeholder="Type your message or click &quot;Record Voice&quot; to speak..."
+            aria-label="Source text to translate"
+          ></textarea>
+
+          <!-- Live Recording Status Indicator -->
+          <div class="live-recording-badge" id="liveRecordingBadge" style="display: none;">
+            <span class="live-dot"></span>
+            <span>Listening... (<span id="recordingTimer">00:00</span>)</span>
+          </div>
+
+          <!-- Transcribing Status Indicator -->
+          <div class="converting-badge" id="convertingBadge" style="display: none;">
+            <svg class="loading-spinner" style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            <span>Converting speech...</span>
+          </div>
+        </div>
+
+        <!-- Mic Error Banner -->
+        <div class="alert-banner error" id="micErrorBanner" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          <span id="micErrorText">Microphone error</span>
+        </div>
+
+        <!-- Input Panel Footer -->
+        <div class="panel-footer">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <!-- Microphone Record Button -->
+            <button type="button" class="btn-mic" id="toggleMicBtn" title="Click to start voice recording">
+              <svg width="14" height="14" id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              <span id="micLabel">Record Voice</span>
+            </button>
+            <!-- Character Counter -->
+            <span class="char-count" id="charCounter">0 / 5000</span>
+          </div>
+
+          <!-- PROCEED / Translate Button -->
+          <button type="button" class="btn-proceed" id="proceedBtn" disabled>
+            <span id="proceedText">PROCEED</span>
+            <svg width="16" height="16" id="proceedArrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            <svg width="16" height="16" id="proceedSpinner" class="loading-spinner" style="display: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           RIGHT PANEL: OUTPUT (TRANSLATION / TTS)
+           ==================================================================== -->
+      <div class="translator-panel">
+        <!-- Output Header -->
+        <div class="panel-header">
+          <!-- Target Language Dropdown -->
+          <div class="target-lang-group">
+            <label for="targetLangSelect" class="target-lang-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+              <span>Target</span>
+            </label>
+            <select id="targetLangSelect" class="target-select">
+              <option value="English">English</option>
+              <option value="Telugu">Telugu (తెలుగు)</option>
+              <option value="Hindi">Hindi (हिन्दी)</option>
+              <option value="Tamil">Tamil (தமிழ்)</option>
+              <option value="Malayalam">Malayalam (മലയാളം)</option>
+            </select>
+          </div>
+
+          <!-- Right Header: Voice Output Toggle & Clear -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="voice-toggle-btn" id="voiceOutputToggleBtn" aria-pressed="false" title="Voice output is OFF — click to enable">
+              <svg width="14" height="14" id="voiceToggleIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
+              <span id="voiceToggleLabel">Voice OFF</span>
+            </button>
+
+            <button type="button" class="btn-clear-panel" id="clearOutputBtn" style="display: none;" title="Clear output">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Detected Language Banner in Output -->
+        <div class="detected-source-banner" id="outputDetectedBanner" style="display: none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          <span>Detected language: <strong id="outputDetectedLang">English</strong></span>
+        </div>
+
+        <!-- Translation Main Content Area -->
+        <div class="content-area" id="outputContentContainer">
+          <!-- Empty State (Default) -->
+          <div class="output-empty" id="outputEmptyState">
+            <div class="empty-icon-circle">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            </div>
+            <p class="empty-title">Your translation will appear here</p>
+            <p class="empty-desc">Select your target language and click PROCEED to convert text or voice.</p>
+          </div>
+
+          <!-- Loading State -->
+          <div class="output-loading" id="outputLoadingState" style="display: none;">
+            <svg class="loading-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            <span class="loading-text" id="outputLoadingText">Translating...</span>
+          </div>
+
+          <!-- Error Notice -->
+          <div class="alert-banner error" id="outputErrorState" style="display: none; margin: auto 0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <div>
+              <strong style="display: block; margin-bottom: 2px;">Translation Notice</strong>
+              <span id="outputErrorText">Unable to translate right now. Please try again.</span>
+            </div>
+          </div>
+
+          <!-- Active Translated Text Display -->
+          <div class="output-text" id="outputResultState" style="display: none;">
+            <span id="translatedTextSpan"></span>
+            <!-- Speaking Pulse Animation -->
+            <span class="tts-pulse" id="ttsPulseIndicator" style="display: none;">
+              <span></span><span></span><span></span>
+            </span>
+          </div>
+        </div>
+
+        <!-- TTS Unsupported Banner -->
+        <div class="alert-banner warning" id="ttsUnsupportedBanner" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+          <span>Voice playback is not available in this browser. You can still read and copy the translation.</span>
+        </div>
+
+        <!-- TTS Error Banner (Missing OS Indic Voice Pack, etc.) -->
+        <div class="alert-banner error" id="ttsErrorBanner" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          <span id="ttsErrorText">Speech playback error.</span>
+        </div>
+
+        <!-- Output Panel Footer -->
+        <div class="panel-footer">
+          <!-- TTS Playback Controls -->
+          <div class="playback-controls">
+            <button type="button" class="btn-play" id="playTtsBtn" disabled title="Listen to translation">
+              <svg width="14" height="14" id="playTtsIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              <span id="playTtsLabel">Play</span>
+            </button>
+
+            <button type="button" class="btn-stop-tts" id="stopTtsBtn" style="display: none;" title="Stop playback">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect width="14" height="14" x="5" y="5" rx="1"/></svg>
+              <span>Stop</span>
+            </button>
+
+            <span class="tts-status-label" id="ttsStatusLabel" style="display: none;">Speaking...</span>
+          </div>
+
+          <!-- Copy Button -->
+          <button type="button" class="btn-copy" id="copyBtn" disabled title="Copy translation to clipboard">
+            <svg width="14" height="14" id="copyIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span id="copyLabel">Copy</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================
+       FOOTER
+       ======================================================================== -->
+  <footer class="footer">
+    <div class="container footer-content">
+      <p>© 2026 AI Voice &amp; Text Translator. All rights reserved.</p>
+      <div class="footer-links">
+        <span class="footer-link" id="footerTermsLink">Terms of Service</span>
+        <span class="footer-link" id="footerPrivacyLink">Privacy Policy</span>
+        <span class="footer-link" id="footerBackendLink">Backend API Settings</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+       AUTH MODAL (Sign In & Register)
+       ======================================================================== -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-box">
+      <button type="button" class="modal-close-btn" id="closeAuthModalBtn" aria-label="Close modal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <!-- App Logo Header -->
+      <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+        <div class="brand-icon" style="width: 44px; height: 44px; margin-bottom: 8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+        </div>
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--text-primary);" id="authModalTitle">Welcome back</h3>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="authModalSubtitle">Sign in to your AI Voice &amp; Text Translator</p>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tabSignIn">Sign In</button>
+        <button type="button" class="auth-tab" id="tabRegister">Create Account</button>
+      </div>
+
+      <!-- Auth Error Banner -->
+      <div class="alert-banner error" id="authErrorBanner" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        <span id="authErrorText">Authentication failed.</span>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="signInForm">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email Address</label>
+          <div class="form-input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            </span>
+            <input type="email" id="loginEmail" class="form-input" required placeholder="name@example.com" autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <div class="form-input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-1.5 1.5L14 9l3 3 2.5-2.5"/><circle cx="8" cy="16" r="5"/></svg>
+            </span>
+            <input type="password" id="loginPassword" class="form-input" required placeholder="••••••••" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit-form" id="submitLoginBtn">
+          <span id="submitLoginLabel">Sign In</span>
+          <svg width="14" height="14" id="submitLoginArrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <svg width="14" height="14" id="submitLoginSpinner" class="loading-spinner" style="display: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" style="display: none;">
+        <div class="form-group">
+          <label class="form-label" for="regName">Full Name</label>
+          <div class="form-input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input type="text" id="regName" class="form-input" required placeholder="Your Name" autocomplete="name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email Address</label>
+          <div class="form-input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            </span>
+            <input type="email" id="regEmail" class="form-input" required placeholder="name@example.com" autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password</label>
+          <div class="form-input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-1.5 1.5L14 9l3 3 2.5-2.5"/><circle cx="8" cy="16" r="5"/></svg>
+            </span>
+            <input type="password" id="regPassword" class="form-input" required placeholder="At least 6 characters" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="regConfirmPassword">Confirm Password</label>
+          <div class="form-input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-1.5 1.5L14 9l3 3 2.5-2.5"/><circle cx="8" cy="16" r="5"/></svg>
+            </span>
+            <input type="password" id="regConfirmPassword" class="form-input" required placeholder="Repeat your password" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit-form" id="submitRegBtn">
+          <span id="submitRegLabel">Create Account</span>
+          <svg width="14" height="14" id="submitRegArrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <svg width="14" height="14" id="submitRegSpinner" class="loading-spinner" style="display: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       BACKEND SETTINGS MODAL
+       ======================================================================== -->
+  <div class="modal-overlay" id="backendModal">
+    <div class="modal-box">
+      <button type="button" class="modal-close-btn" id="closeBackendModalBtn" aria-label="Close modal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
+        Backend API Configuration
+      </h3>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+        Configure the backend URL hosting your Next.js API routes (<code>/api/translate</code>, <code>/api/speech-to-text</code>, <code>/api/auth/*</code>).
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="backendUrlInput">Backend URL (HTTPS)</label>
+        <input type="url" id="backendUrlInput" class="form-input" style="padding-left: 12px;" placeholder="https://your-app.vercel.app or http://localhost:3000" />
+      </div>
+
+      <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+        <p>• <strong>Production:</strong> Enter your deployed Next.js HTTPS domain (e.g., <code>https://ai-voice-translator.vercel.app</code>).</p>
+        <p>• <strong>Same Domain:</strong> Leave blank to use relative paths (e.g., when index.html is served from the same server).</p>
+        <p>• <strong>Local Development:</strong> Use <code>http://localhost:3000</code> when running Next.js locally.</p>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn-submit-form" id="saveBackendUrlBtn" style="margin-top: 0; flex: 1;">Save &amp; Test Connection</button>
+        <button type="button" class="btn-reset-all" id="resetBackendUrlBtn" style="margin-top: 0;" title="Reset to default code constant">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TERMS & PRIVACY TEXT MODAL
+       ======================================================================== -->
+  <div class="modal-overlay" id="legalModal">
+    <div class="modal-box" style="max-width: 600px;">
+      <button type="button" class="modal-close-btn" id="closeLegalModalBtn" aria-label="Close modal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h3 style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;" id="legalModalTitle">Terms of Service</h3>
+      <div id="legalModalBody" style="font-size: 12px; color: var(--text-secondary); line-height: 1.6; max-height: 60vh; overflow-y: auto; padding-right: 4px;"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       BROWSER JAVASCRIPT: APPLICATION LOGIC & REAL SERVICES
+       ======================================================================== -->
+  <script>
+    // ============================================================================
+    // SAFE BROWSER STORAGE WRAPPER WITH IN-MEMORY SESSION FALLBACK
+    // ----------------------------------------------------------------------------
+    // Prevents DOMException SecurityErrors when running in sandboxed iframes
+    // without 'allow-same-origin', private browsing mode, or with cookies disabled.
+    // Falls back gracefully to an in-memory session store so the app never crashes.
+    // ============================================================================
+    const SafeStorage = (function() {
+      function createStore(storageKey) {
+        const memoryFallback = new Map();
+        let isNativeAvailable = false;
+        let nativeStorage = null;
+
+        try {
+          if (typeof window !== 'undefined') {
+            // In sandboxed frames without 'allow-same-origin', evaluating
+            // window.localStorage or window.sessionStorage throws a SecurityError DOMException.
+            const candidate = window[storageKey];
+            if (candidate) {
+              const probe = '__probe_' + Math.random().toString(36).substring(2);
+              candidate.setItem(probe, probe);
+              const read = candidate.getItem(probe);
+              candidate.removeItem(probe);
+              if (read === probe) {
+                nativeStorage = candidate;
+                isNativeAvailable = true;
+              }
+            }
+          }
+        } catch (e) {
+          // Expected in sandboxed environments, file:// origins with strict flags, or privacy modes
+          isNativeAvailable = false;
+          nativeStorage = null;
+        }
+
+        return {
+          isAvailable() {
+            return isNativeAvailable;
+          },
+          getItem(key) {
+            if (isNativeAvailable && nativeStorage) {
+              try {
+                return nativeStorage.getItem(key);
+              } catch (e) {
+                // Fall back to in-memory store if dynamic read is blocked
+              }
+            }
+            return memoryFallback.has(key) ? memoryFallback.get(key) : null;
+          },
+          setItem(key, value) {
+            const strVal = String(value);
+            memoryFallback.set(key, strVal);
+            if (isNativeAvailable && nativeStorage) {
+              try {
+                nativeStorage.setItem(key, strVal);
+              } catch (e) {
+                // Ignore quota errors or dynamic storage blocks
+              }
+            }
+          },
+          removeItem(key) {
+            memoryFallback.delete(key);
+            if (isNativeAvailable && nativeStorage) {
+              try {
+                nativeStorage.removeItem(key);
+              } catch (e) {
+                // Ignore dynamic storage blocks
+              }
+            }
+          },
+          clear() {
+            memoryFallback.clear();
+            if (isNativeAvailable && nativeStorage) {
+              try {
+                nativeStorage.clear();
+              } catch (e) {
+                // Ignore
+              }
+            }
+          }
+        };
+      }
+
+      const localWrapper = createStore('localStorage');
+      const sessionWrapper = createStore('sessionStorage');
+
+      // Attempt safe property override on window if native access throws
+      try {
+        if (typeof window !== 'undefined') {
+          let localWorking = false;
+          try {
+            if (window.localStorage) {
+              localWorking = true;
+            }
+          } catch (e) {
+            localWorking = false;
+          }
+          if (!localWorking) {
+            try {
+              Object.defineProperty(window, 'localStorage', {
+                configurable: true,
+                enumerable: true,
+                get: () => localWrapper
+              });
+            } catch (e) {}
+            try {
+              Object.defineProperty(window, 'sessionStorage', {
+                configurable: true,
+                enumerable: true,
+                get: () => sessionWrapper
+              });
+            } catch (e) {}
+          }
+        }
+      } catch (e) {}
+
+      return {
+        local: localWrapper,
+        session: sessionWrapper,
+        isAvailable: () => localWrapper.isAvailable(),
+        getItem: (key) => localWrapper.getItem(key),
+        setItem: (key, val) => localWrapper.setItem(key, val),
+        removeItem: (key) => localWrapper.removeItem(key),
+        clear: () => localWrapper.clear()
+      };
+    })();
+
+    // ============================================================================
+    // 1. PRODUCTION BACKEND CONFIGURATION
+    // ----------------------------------------------------------------------------
+    // Production Vercel backend: https://ai-voice-translator-three.vercel.app
+    // - For the Vercel-hosted application, use relative same-origin API requests ('').
+    // - For Web-A2Z (https://www.web-a2z.com), use the Vercel production URL.
+    // ============================================================================
+    const VERCEL_PRODUCTION_URL = 'https://ai-voice-translator-three.vercel.app';
+    const BACKEND_URL = VERCEL_PRODUCTION_URL;
+
+    // Helper to get active backend URL (allows runtime override via Backend Settings modal)
+    function getActiveBackendUrl() {
+      // 1. Check for manual override stored via the Settings modal
+      const stored = SafeStorage.getItem('ai_translator_backend_url');
+      if (stored !== null && stored !== undefined && stored.trim() !== '') {
+        return stored.trim().replace(/\/+$/, '');
+      }
+
+      // 2. Auto-detect origin context:
+      if (typeof window !== 'undefined' && window.location) {
+        const origin = window.location.origin;
+        const hostname = window.location.hostname;
+
+        // When hosted directly on the Vercel production deployment, use relative same-origin API requests:
+        if (
+          origin === VERCEL_PRODUCTION_URL ||
+          hostname.endsWith('.vercel.app') ||
+          hostname === 'ai-voice-translator-three.vercel.app'
+        ) {
+          return '';
+        }
+
+        // When hosted on Web-A2Z, use the Vercel production URL as the API base URL:
+        if (hostname.includes('web-a2z.com')) {
+          return VERCEL_PRODUCTION_URL;
+        }
+      }
+
+      // 3. Default fallback for Web-A2Z, local file://, or preview frames:
+      return VERCEL_PRODUCTION_URL;
+    }
+
+    function setActiveBackendUrl(url) {
+      if (!url || url.trim() === VERCEL_PRODUCTION_URL.trim() || url.trim() === '') {
+        SafeStorage.removeItem('ai_translator_backend_url');
+      } else {
+        SafeStorage.setItem('ai_translator_backend_url', url.trim().replace(/\/+$/, ''));
+      }
+    }
+
+    // Supported Languages
+    const SUPPORTED_LANGUAGES = ['English', 'Telugu', 'Hindi', 'Tamil', 'Malayalam'];
+
+    // ============================================================================
+    // 2. THEME MANAGER
+    // ============================================================================
+    const ThemeManager = {
+      theme: 'system',
+      init() {
+        try {
+          const saved = SafeStorage.getItem('theme-preference');
+          if (saved === 'light' || saved === 'dark' || saved === 'system') {
+            this.theme = saved;
+          }
+        } catch {
+          this.theme = 'system';
+        }
+
+        this.apply();
+        this.updateButtons();
+
+        // Listen for OS system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          if (this.theme === 'system') {
+            this.apply();
+          }
+        });
+
+        // Button handlers
+        document.getElementById('themeBtnLight').addEventListener('click', () => this.set('light'));
+        document.getElementById('themeBtnSystem').addEventListener('click', () => this.set('system'));
+        document.getElementById('themeBtnDark').addEventListener('click', () => this.set('dark'));
+      },
+
+      set(theme) {
+        this.theme = theme;
+        try {
+          SafeStorage.setItem('theme-preference', theme);
+        } catch {}
+        this.apply();
+        this.updateButtons();
+      },
+
+      apply() {
+        const root = document.documentElement;
+        const systemIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = this.theme === 'dark' || (this.theme === 'system' && systemIsDark);
+        if (isDark) {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      },
+
+      updateButtons() {
+        document.getElementById('themeBtnLight').classList.toggle('active', this.theme === 'light');
+        document.getElementById('themeBtnSystem').classList.toggle('active', this.theme === 'system');
+        document.getElementById('themeBtnDark').classList.toggle('active', this.theme === 'dark');
+      }
+    };
+
+    // ============================================================================
+    // 3. TEXT-TO-SPEECH (TTS) MANAGER (Exact Web Speech API Abstraction)
+    // ============================================================================
+    class TTSManager {
+      constructor() {
+        this.synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
+        this.playbackState = 'idle'; // 'idle' | 'speaking' | 'paused'
+        this.currentUtterance = null;
+        if (this.synth) {
+          this.synth.getVoices();
+        }
+      }
+
+      static LANG_MAP = {
+        English: 'en-US',
+        Telugu: 'te-IN',
+        Hindi: 'hi-IN',
+        Tamil: 'ta-IN',
+        Malayalam: 'ml-IN'
+      };
+
+      static NO_SILENT_FALLBACK = new Set(['Telugu', 'Tamil', 'Malayalam', 'Hindi']);
+
+      isSupported() {
+        return this.synth !== null;
+      }
+
+      getState() {
+        return this.playbackState;
+      }
+
+      getVoicesAsync() {
+        return new Promise((resolve) => {
+          if (!this.synth) return resolve([]);
+          const voices = this.synth.getVoices();
+          if (voices.length > 0) return resolve(voices);
+
+          const onVoicesChanged = () => {
+            this.synth.removeEventListener('voiceschanged', onVoicesChanged);
+            resolve(this.synth.getVoices());
+          };
+          this.synth.addEventListener('voiceschanged', onVoicesChanged);
+
+          setTimeout(() => {
+            this.synth.removeEventListener('voiceschanged', onVoicesChanged);
+            resolve(this.synth.getVoices());
+          }, 1500);
+        });
+      }
+
+      findVoice(voices, langCode) {
+        const lower = langCode.toLowerCase();
+        const baseLang = lower.split('-')[0];
+        const exact = voices.find((v) => v.lang.toLowerCase() === lower);
+        if (exact) return exact;
+        const prefix = voices.find((v) => v.lang.toLowerCase().startsWith(baseLang));
+        if (prefix) return prefix;
+        return null;
+      }
+
+      speak(text, languageName = 'English', onEnd, onError, onStateChange) {
+        if (!this.synth) {
+          onError?.('Speech playback is not supported in this browser.');
+          return false;
+        }
+        if (!text || !text.trim()) return false;
+
+        this.stop();
+        const langCode = TTSManager.LANG_MAP[languageName] || 'en-US';
+
+        this.playbackState = 'speaking';
+        onStateChange?.('speaking');
+
+        this.getVoicesAsync().then((voices) => {
+          if (this.playbackState !== 'speaking') return;
+
+          const matchedVoice = voices.length > 0 ? this.findVoice(voices, langCode) : null;
+
+          if (voices.length > 0 && matchedVoice === null && TTSManager.NO_SILENT_FALLBACK.has(languageName)) {
+            this.playbackState = 'idle';
+            onStateChange?.('idle');
+            onError?.(
+              `No ${languageName} voice is installed on this device. To enable ${languageName} speech, install a ${languageName} language pack in your OS settings. The translation text is shown above.`
+            );
+            return;
+          }
+
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = langCode;
+          utterance.rate = 0.92;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+
+          if (matchedVoice) {
+            utterance.voice = matchedVoice;
+          }
+
+          utterance.onstart = () => {
+            this.playbackState = 'speaking';
+            onStateChange?.('speaking');
+          };
+
+          utterance.onend = () => {
+            this.playbackState = 'idle';
+            this.currentUtterance = null;
+            onStateChange?.('idle');
+            onEnd?.();
+          };
+
+          utterance.onerror = (e) => {
+            this.playbackState = 'idle';
+            this.currentUtterance = null;
+            onStateChange?.('idle');
+            if (e.error !== 'interrupted' && e.error !== 'canceled') {
+              onError?.(`Speech playback error (${e.error || 'unknown'}). You can still read the translation.`);
+            } else {
+              onEnd?.();
+            }
+          };
+
+          try {
+            this.currentUtterance = utterance;
+            this.synth.speak(utterance);
+          } catch {
+            this.playbackState = 'idle';
+            this.currentUtterance = null;
+            onStateChange?.('idle');
+            onError?.('Failed to start speech playback. Please try again.');
+          }
+        });
+
+        return true;
+      }
+
+      pause() {
+        if (this.synth && this.playbackState === 'speaking') {
+          this.synth.pause();
+          this.playbackState = 'paused';
+        }
+      }
+
+      resume() {
+        if (this.synth && this.playbackState === 'paused') {
+          this.synth.resume();
+          this.playbackState = 'speaking';
+        }
+      }
+
+      stop() {
+        if (this.synth) {
+          this.synth.cancel();
+        }
+        this.playbackState = 'idle';
+        this.currentUtterance = null;
+      }
+    }
+
+    // ============================================================================
+    // 4. AUDIO RECORDER (Browser MediaRecorder Wrapper)
+    // ============================================================================
+    class AudioRecorder {
+      constructor() {
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.stream = null;
+      }
+
+      static getSupportedMimeType() {
+        if (typeof window === 'undefined' || !window.MediaRecorder) {
+          return 'audio/webm';
+        }
+        const types = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/mp4',
+          'audio/ogg;codecs=opus',
+          'audio/ogg',
+          'audio/wav'
+        ];
+        for (const type of types) {
+          if (MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return 'audio/webm';
+      }
+
+      static isSupported() {
+        return (
+          typeof window !== 'undefined' &&
+          !!navigator.mediaDevices?.getUserMedia &&
+          typeof MediaRecorder !== 'undefined'
+        );
+      }
+
+      async start() {
+        if (!AudioRecorder.isSupported()) {
+          throw new Error("Voice input isn't supported in this browser. You can still type your message.");
+        }
+        try {
+          this.audioChunks = [];
+          this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const mimeType = AudioRecorder.getSupportedMimeType();
+          this.mediaRecorder = new MediaRecorder(this.stream, { mimeType });
+
+          this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              this.audioChunks.push(event.data);
+            }
+          };
+
+          this.mediaRecorder.start(100);
+          return true;
+        } catch (err) {
+          this.cleanup();
+          if (
+            err.name === 'NotAllowedError' ||
+            err.name === 'PermissionDeniedError' ||
+            err.message?.includes('Permission denied')
+          ) {
+            throw new Error('Microphone access was denied. Please allow microphone access in your browser settings and try again.');
+          }
+          if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            throw new Error('No microphone was found. Please connect a microphone and try again.');
+          }
+          if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            throw new Error('Your microphone is currently in use by another application. Please close it and try again.');
+          }
+          throw new Error('Could not start recording. Please check your microphone and try again.');
+        }
+      }
+
+      async stop() {
+        return new Promise((resolve, reject) => {
+          if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+            this.cleanup();
+            reject(new Error('Recording session expired. Please try recording again.'));
+            return;
+          }
+          const mimeType = this.mediaRecorder.mimeType || AudioRecorder.getSupportedMimeType();
+
+          this.mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+            this.cleanup();
+            if (audioBlob.size === 0) {
+              reject(new Error('No audio was captured. Please speak clearly into the microphone and try again.'));
+            } else {
+              resolve({ blob: audioBlob, mimeType });
+            }
+          };
+
+          try {
+            this.mediaRecorder.stop();
+          } catch {
+            this.cleanup();
+            reject(new Error('Recording stopped unexpectedly. Please try again.'));
+          }
+        });
+      }
+
+      cleanup() {
+        if (this.stream) {
+          this.stream.getTracks().forEach((track) => track.stop());
+          this.stream = null;
+        }
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+      }
+    }
+
+    // ============================================================================
+    // 5. APPLICATION STATE COORDINATOR
+    // ============================================================================
+    const App = {
+      // User session state
+      user: null,
+
+      // Core translation state
+      inputText: '',
+      translatedText: '',
+      targetLanguage: 'English',
+      detectedLanguage: null,
+      isLoading: false,
+
+      // Voice Output state
+      isVoiceOutputEnabled: false,
+      ttsManager: null,
+
+      // Voice Input state
+      audioRecorder: null,
+      micState: 'idle', // 'idle' | 'recording' | 'processing' | 'success' | 'error'
+      recordingSeconds: 0,
+      recordingTimerId: null,
+
+      init() {
+        ThemeManager.init();
+
+        this.ttsManager = new TTSManager();
+        this.audioRecorder = new AudioRecorder();
+
+        if (!AudioRecorder.isSupported()) {
+          document.getElementById('micUnsupportedBanner').style.display = 'flex';
+          const micBtn = document.getElementById('toggleMicBtn');
+          micBtn.disabled = true;
+          micBtn.title = 'Microphone is not supported in this browser';
+          document.getElementById('micLabel').textContent = 'Voice Unsupported';
+        }
+
+        if (!this.ttsManager.isSupported()) {
+          document.getElementById('ttsUnsupportedBanner').style.display = 'flex';
+          document.getElementById('voiceOutputToggleBtn').disabled = true;
+          document.getElementById('playTtsBtn').disabled = true;
+        }
+
+        this.bindEvents();
+        this.syncBackendUrlDisplay();
+        this.checkAuthSession();
+      },
+
+      // ─── Network & CORS Helper ──────────────────────────────────────────────
+      async request(endpoint, options = {}) {
+        const baseUrl = getActiveBackendUrl();
+        const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+
+        const defaultHeaders = {};
+        const token = SafeStorage.getItem('ai_translator_token');
+        if (token) {
+          defaultHeaders['Authorization'] = `Bearer ${token}`;
+        }
+
+        const defaultOptions = {
+          credentials: 'include', // Sends HTTP-only session cookie 'app-session'
+          headers: defaultHeaders
+        };
+
+        const mergedOptions = {
+          ...defaultOptions,
+          ...options,
+          headers: {
+            ...defaultHeaders,
+            ...(options.headers || {})
+          }
+        };
+
+        try {
+          const res = await fetch(url, mergedOptions);
+          return res;
+        } catch (err) {
+          // If fetch throws TypeError (Failed to fetch), usually CORS or backend offline
+          console.error(`[API Network Error on ${url}]:`, err);
+          const isNetworkError = err.message?.includes('Failed to fetch') || err.name === 'TypeError';
+          if (isNetworkError) {
+            this.showConnectionWarning(
+              `Could not reach backend at ${baseUrl || 'current origin'}. Ensure the backend is live and CORS allows https://www.web-a2z.com.`
+            );
+          }
+          throw err;
+        }
+      },
+
+      showConnectionWarning(message) {
+        const banner = document.getElementById('connectionWarningBanner');
+        const text = document.getElementById('connectionWarningText');
+        text.textContent = message;
+        banner.style.display = 'flex';
+        document.getElementById('backendDot').className = 'backend-dot disconnected';
+      },
+
+      hideConnectionWarning() {
+        document.getElementById('connectionWarningBanner').style.display = 'none';
+        document.getElementById('backendDot').className = 'backend-dot';
+      },
+
+      // ─── Auth Session ───────────────────────────────────────────────────────
+      async checkAuthSession() {
+        try {
+          const res = await this.request('/api/auth/me', { method: 'GET' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated && data.user) {
+              this.setUser(data.user);
+              this.hideConnectionWarning();
+              return;
+            }
+          }
+          this.setUser(null);
+        } catch {
+          // Check if user was cached in SafeStorage
+          try {
+            const cached = SafeStorage.getItem('ai_translator_user');
+            if (cached) {
+              this.setUser(JSON.parse(cached));
+            } else {
+              this.setUser(null);
+            }
+          } catch {
+            this.setUser(null);
+          }
+        }
+      },
+
+      setUser(user) {
+        this.user = user;
+        const unauthNav = document.getElementById('unauthNav');
+        const authNav = document.getElementById('authNav');
+
+        if (user) {
+          unauthNav.style.display = 'none';
+          authNav.style.display = 'block';
+
+          const initial = (user.name ? user.name[0] : user.email[0]).toUpperCase();
+          document.getElementById('userAvatarLetter').textContent = initial;
+          document.getElementById('userNameDisplay').textContent = user.name || user.email;
+          document.getElementById('dropdownEmail').textContent = user.email;
+          document.getElementById('dropdownName').textContent = user.name || '';
+
+          SafeStorage.setItem('ai_translator_user', JSON.stringify(user));
+        } else {
+          unauthNav.style.display = 'flex';
+          authNav.style.display = 'none';
+          SafeStorage.removeItem('ai_translator_user');
+        }
+      },
+
+      async logout() {
+        try {
+          await this.request('/api/auth/logout', { method: 'POST' });
+        } catch (e) {
+          console.error('Logout error:', e);
+        }
+        SafeStorage.removeItem('ai_translator_token');
+        this.setUser(null);
+        this.closeUserDropdown();
+      },
+
+      // ─── Translation Execution ──────────────────────────────────────────────
+      async translate(customText) {
+        const textToTranslate = customText !== undefined ? customText : this.inputText;
+        if (!textToTranslate.trim() || this.isLoading) return;
+
+        this.stopSpeech();
+        this.setLoading(true);
+        this.clearOutputError();
+
+        try {
+          const res = await this.request('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: textToTranslate.trim(),
+              targetLanguage: this.targetLanguage
+            })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            // Check for unauthenticated error (401)
+            if (res.status === 401) {
+              this.setUser(null);
+              this.showAuthModal('signin', 'Please sign in to translate.');
+              throw new Error(data.error || 'Authentication required. Please sign in.');
+            }
+            throw new Error(data.error || 'Unable to translate right now. Please try again.');
+          }
+
+          this.translatedText = data.translatedText;
+          this.detectedLanguage = data.detectedLanguage || null;
+          this.renderTranslationResult();
+
+          // Auto-speak if Voice Output is enabled
+          if (this.isVoiceOutputEnabled && this.translatedText) {
+            this.speakTranslation(this.translatedText, this.targetLanguage);
+          }
+          this.hideConnectionWarning();
+        } catch (err) {
+          this.renderTranslationError(err.message || 'Unable to translate right now. Please check backend connection.');
+        } finally {
+          this.setLoading(false);
+        }
+      },
+
+      setLoading(isLoading) {
+        this.isLoading = isLoading;
+        const proceedBtn = document.getElementById('proceedBtn');
+        const proceedText = document.getElementById('proceedText');
+        const proceedArrow = document.getElementById('proceedArrow');
+        const proceedSpinner = document.getElementById('proceedSpinner');
+        const loadingState = document.getElementById('outputLoadingState');
+        const loadingText = document.getElementById('outputLoadingText');
+        const emptyState = document.getElementById('outputEmptyState');
+        const resultState = document.getElementById('outputResultState');
+
+        if (isLoading) {
+          proceedBtn.disabled = true;
+          proceedText.textContent = 'Translating...';
+          proceedArrow.style.display = 'none';
+          proceedSpinner.style.display = 'inline-block';
+          loadingText.textContent = `Translating into ${this.targetLanguage}...`;
+          loadingState.style.display = 'flex';
+          emptyState.style.display = 'none';
+          resultState.style.display = 'none';
+        } else {
+          proceedBtn.disabled = !this.inputText.trim();
+          proceedText.textContent = 'PROCEED';
+          proceedArrow.style.display = 'inline-block';
+          proceedSpinner.style.display = 'none';
+          loadingState.style.display = 'none';
+        }
+      },
+
+      renderTranslationResult() {
+        const resultState = document.getElementById('outputResultState');
+        const emptyState = document.getElementById('outputEmptyState');
+        const textSpan = document.getElementById('translatedTextSpan');
+        const outputDetectedBanner = document.getElementById('outputDetectedBanner');
+        const outputDetectedLang = document.getElementById('outputDetectedLang');
+        const copyBtn = document.getElementById('copyBtn');
+        const playBtn = document.getElementById('playTtsBtn');
+        const clearOutputBtn = document.getElementById('clearOutputBtn');
+        const sourceDetectedPill = document.getElementById('sourceDetectedPill');
+        const sourceDetectedLabel = document.getElementById('sourceDetectedLabel');
+
+        textSpan.textContent = this.translatedText;
+        resultState.style.display = 'block';
+        emptyState.style.display = 'none';
+        copyBtn.disabled = false;
+        playBtn.disabled = !this.ttsManager.isSupported();
+        clearOutputBtn.style.display = 'inline-flex';
+
+        if (this.detectedLanguage) {
+          outputDetectedLang.textContent = this.detectedLanguage;
+          outputDetectedBanner.style.display = 'flex';
+          sourceDetectedLabel.textContent = `Detected: ${this.detectedLanguage}`;
+          sourceDetectedPill.classList.add('detected');
+        }
+
+        this.updateResetAllVisibility();
+      },
+
+      renderTranslationError(message) {
+        const errorState = document.getElementById('outputErrorState');
+        const errorText = document.getElementById('outputErrorText');
+        const emptyState = document.getElementById('outputEmptyState');
+        const resultState = document.getElementById('outputResultState');
+
+        errorText.textContent = message;
+        errorState.style.display = 'flex';
+        emptyState.style.display = 'none';
+        resultState.style.display = 'none';
+        document.getElementById('copyBtn').disabled = true;
+        document.getElementById('playTtsBtn').disabled = true;
+      },
+
+      clearOutputError() {
+        document.getElementById('outputErrorState').style.display = 'none';
+        document.getElementById('ttsErrorBanner').style.display = 'none';
+      },
+
+      // ─── Voice Input (Speech-to-Text) ────────────────────────────────────────
+      async toggleMicrophone() {
+        if (!this.audioRecorder || this.micState === 'processing') return;
+
+        // Start Recording
+        if (this.micState === 'idle' || this.micState === 'success' || this.micState === 'error') {
+          this.stopSpeech();
+          this.clearMicError();
+          try {
+            const started = await this.audioRecorder.start();
+            if (started) {
+              this.setMicState('recording');
+              this.startRecordingTimer();
+            }
+          } catch (err) {
+            this.showMicError(err.message || 'Could not access microphone.');
+            this.setMicState('error');
+          }
+          return;
+        }
+
+        // Stop Recording & Send Audio to STT API
+        if (this.micState === 'recording') {
+          this.stopRecordingTimer();
+          this.setMicState('processing');
+
+          try {
+            const { blob, mimeType } = await this.audioRecorder.stop();
+
+            const formData = new FormData();
+            const extension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+            formData.append('audio', blob, `speech.${extension}`);
+
+            const res = await this.request('/api/speech-to-text', {
+              method: 'POST',
+              body: formData
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+              if (res.status === 401) {
+                this.setUser(null);
+                this.showAuthModal('signin', 'Please sign in to use voice translation.');
+                throw new Error('Authentication required. Please sign in.');
+              }
+              throw new Error(data.error || 'Could not understand speech. Please speak clearly and try again.');
+            }
+
+            const recognizedText = (data.text || '').trim();
+            if (!recognizedText) {
+              throw new Error('No speech was detected. Please try speaking again.');
+            }
+
+            this.setMicState('success');
+            this.setInputText(recognizedText);
+
+            // Auto-translate speech immediately
+            await this.translate(recognizedText);
+
+            setTimeout(() => {
+              if (this.micState === 'success') {
+                this.setMicState('idle');
+              }
+            }, 2000);
+          } catch (err) {
+            this.showMicError(err.message || 'Voice processing failed. Please try again.');
+            this.setMicState('error');
+          }
+        }
+      },
+
+      setMicState(state) {
+        this.micState = state;
+        const micBtn = document.getElementById('toggleMicBtn');
+        const micLabel = document.getElementById('micLabel');
+        const liveBadge = document.getElementById('liveRecordingBadge');
+        const convertingBadge = document.getElementById('convertingBadge');
+
+        micBtn.className = 'btn-mic ' + state;
+
+        if (state === 'recording') {
+          micLabel.textContent = 'Stop Recording';
+          liveBadge.style.display = 'inline-flex';
+          convertingBadge.style.display = 'none';
+          micBtn.disabled = false;
+        } else if (state === 'processing') {
+          micLabel.textContent = 'Converting...';
+          liveBadge.style.display = 'none';
+          convertingBadge.style.display = 'inline-flex';
+          micBtn.disabled = true;
+        } else if (state === 'success') {
+          micLabel.textContent = 'Voice Captured';
+          liveBadge.style.display = 'none';
+          convertingBadge.style.display = 'none';
+          micBtn.disabled = false;
+        } else if (state === 'error') {
+          micLabel.textContent = 'Try Again';
+          liveBadge.style.display = 'none';
+          convertingBadge.style.display = 'none';
+          micBtn.disabled = false;
+        } else {
+          // idle
+          micLabel.textContent = 'Record Voice';
+          liveBadge.style.display = 'none';
+          convertingBadge.style.display = 'none';
+          micBtn.disabled = false;
+        }
+      },
+
+      startRecordingTimer() {
+        this.stopRecordingTimer();
+        this.recordingSeconds = 0;
+        this.updateRecordingTimerDisplay();
+        this.recordingTimerId = setInterval(() => {
+          this.recordingSeconds++;
+          this.updateRecordingTimerDisplay();
+        }, 1000);
+      },
+
+      stopRecordingTimer() {
+        if (this.recordingTimerId) {
+          clearInterval(this.recordingTimerId);
+          this.recordingTimerId = null;
+        }
+      },
+
+      updateRecordingTimerDisplay() {
+        const mins = Math.floor(this.recordingSeconds / 60).toString().padStart(2, '0');
+        const secs = (this.recordingSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('recordingTimer').textContent = `${mins}:${secs}`;
+      },
+
+      showMicError(msg) {
+        document.getElementById('micErrorText').textContent = msg;
+        document.getElementById('micErrorBanner').style.display = 'flex';
+      },
+
+      clearMicError() {
+        document.getElementById('micErrorBanner').style.display = 'none';
+      },
+
+      // ─── Voice Output (Text-to-Speech) ──────────────────────────────────────
+      speakTranslation(text, lang) {
+        if (!this.ttsManager || !text || !this.ttsManager.isSupported()) return;
+        this.stopSpeech();
+
+        setTimeout(() => {
+          this.ttsManager.speak(
+            text,
+            lang,
+            () => this.updateTtsUi('idle'),
+            (err) => {
+              this.updateTtsUi('idle');
+              this.showTtsError(err);
+            },
+            (state) => this.updateTtsUi(state)
+          );
+        }, 100);
+      },
+
+      handleSpeakControl() {
+        if (!this.ttsManager || !this.translatedText) return;
+        const state = this.ttsManager.getState();
+
+        if (state === 'speaking') {
+          this.ttsManager.pause();
+          this.updateTtsUi('paused');
+        } else if (state === 'paused') {
+          this.ttsManager.resume();
+          this.updateTtsUi('speaking');
+        } else {
+          this.clearTtsError();
+          this.speakTranslation(this.translatedText, this.targetLanguage);
+        }
+      },
+
+      stopSpeech() {
+        if (this.ttsManager) {
+          this.ttsManager.stop();
+          this.updateTtsUi('idle');
+        }
+        this.clearTtsError();
+      },
+
+      updateTtsUi(state) {
+        const playBtn = document.getElementById('playTtsBtn');
+        const playLabel = document.getElementById('playTtsLabel');
+        const stopBtn = document.getElementById('stopTtsBtn');
+        const statusLabel = document.getElementById('ttsStatusLabel');
+        const pulseIndicator = document.getElementById('ttsPulseIndicator');
+
+        playBtn.className = 'btn-play ' + state;
+
+        if (state === 'speaking') {
+          playLabel.textContent = 'Pause';
+          stopBtn.style.display = 'inline-flex';
+          statusLabel.textContent = 'Speaking...';
+          statusLabel.style.display = 'inline';
+          pulseIndicator.style.display = 'inline-flex';
+        } else if (state === 'paused') {
+          playLabel.textContent = 'Resume';
+          stopBtn.style.display = 'inline-flex';
+          statusLabel.textContent = 'Paused';
+          statusLabel.style.display = 'inline';
+          pulseIndicator.style.display = 'none';
+        } else {
+          // idle
+          playLabel.textContent = 'Play';
+          stopBtn.style.display = 'none';
+          statusLabel.style.display = 'none';
+          pulseIndicator.style.display = 'none';
+        }
+      },
+
+      showTtsError(msg) {
+        document.getElementById('ttsErrorText').textContent = msg;
+        document.getElementById('ttsErrorBanner').style.display = 'flex';
+      },
+
+      clearTtsError() {
+        document.getElementById('ttsErrorBanner').style.display = 'none';
+      },
+
+      toggleVoiceOutput() {
+        this.isVoiceOutputEnabled = !this.isVoiceOutputEnabled;
+        const toggleBtn = document.getElementById('voiceOutputToggleBtn');
+        const label = document.getElementById('voiceToggleLabel');
+        const icon = document.getElementById('voiceToggleIcon');
+
+        toggleBtn.classList.toggle('active', this.isVoiceOutputEnabled);
+        toggleBtn.setAttribute('aria-pressed', this.isVoiceOutputEnabled);
+
+        if (this.isVoiceOutputEnabled) {
+          label.textContent = 'Voice ON';
+          toggleBtn.title = 'Voice output is ON — click to disable';
+          icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>';
+        } else {
+          label.textContent = 'Voice OFF';
+          toggleBtn.title = 'Voice output is OFF — click to enable';
+          icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>';
+          this.stopSpeech();
+        }
+      },
+
+      // ─── Input Management ───────────────────────────────────────────────────
+      setInputText(text) {
+        this.inputText = text.slice(0, 5000);
+        const textarea = document.getElementById('inputTextarea');
+        textarea.value = this.inputText;
+        document.getElementById('charCounter').textContent = `${this.inputText.length} / 5000`;
+        document.getElementById('proceedBtn').disabled = !this.inputText.trim() || this.isLoading;
+        document.getElementById('clearInputBtn').style.display = this.inputText ? 'inline-flex' : 'none';
+        this.updateResetAllVisibility();
+      },
+
+      clearInput() {
+        this.setInputText('');
+        this.clearMicError();
+        if (this.micState !== 'recording' && this.micState !== 'processing') {
+          this.setMicState('idle');
+        }
+        document.getElementById('sourceDetectedPill').classList.remove('detected');
+        document.getElementById('sourceDetectedLabel').textContent = 'Source language detected automatically';
+      },
+
+      clearOutput() {
+        this.stopSpeech();
+        this.translatedText = '';
+        this.detectedLanguage = null;
+        this.clearOutputError();
+
+        document.getElementById('outputResultState').style.display = 'none';
+        document.getElementById('outputEmptyState').style.display = 'flex';
+        document.getElementById('outputDetectedBanner').style.display = 'none';
+        document.getElementById('clearOutputBtn').style.display = 'none';
+        document.getElementById('copyBtn').disabled = true;
+        document.getElementById('playTtsBtn').disabled = true;
+        this.updateResetAllVisibility();
+      },
+
+      resetAll() {
+        this.clearInput();
+        this.clearOutput();
+      },
+
+      updateResetAllVisibility() {
+        const hasContent = this.inputText.length > 0 || this.translatedText.length > 0;
+        document.getElementById('resetAllBtn').style.display = hasContent ? 'inline-flex' : 'none';
+      },
+
+      // ─── Copy to Clipboard ──────────────────────────────────────────────────
+      async copyOutput() {
+        if (!this.translatedText) return;
+        try {
+          await navigator.clipboard.writeText(this.translatedText);
+          const copyBtn = document.getElementById('copyBtn');
+          const copyLabel = document.getElementById('copyLabel');
+          const copyIcon = document.getElementById('copyIcon');
+
+          copyBtn.classList.add('copied');
+          copyLabel.textContent = 'Copied';
+          copyIcon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+
+          setTimeout(() => {
+            copyBtn.classList.remove('copied');
+            copyLabel.textContent = 'Copy';
+            copyIcon.innerHTML = '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>';
+          }, 2000);
+        } catch {
+          // Fallback if clipboard API is restricted
+          const temp = document.createElement('textarea');
+          temp.value = this.translatedText;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+        }
+      },
+
+      // ─── UI Modal Handlers ──────────────────────────────────────────────────
+      showAuthModal(initialTab = 'signin', errorMsg = null) {
+        const modal = document.getElementById('authModal');
+        modal.classList.add('show');
+        this.switchAuthTab(initialTab);
+        if (errorMsg) {
+          document.getElementById('authErrorText').textContent = errorMsg;
+          document.getElementById('authErrorBanner').style.display = 'flex';
+        } else {
+          document.getElementById('authErrorBanner').style.display = 'none';
+        }
+      },
+
+      closeAuthModal() {
+        document.getElementById('authModal').classList.remove('show');
+        document.getElementById('authErrorBanner').style.display = 'none';
+      },
+
+      switchAuthTab(tab) {
+        const isSignIn = tab === 'signin';
+        document.getElementById('tabSignIn').classList.toggle('active', isSignIn);
+        document.getElementById('tabRegister').classList.toggle('active', !isSignIn);
+        document.getElementById('signInForm').style.display = isSignIn ? 'block' : 'none';
+        document.getElementById('registerForm').style.display = isSignIn ? 'none' : 'block';
+        document.getElementById('authModalTitle').textContent = isSignIn ? 'Welcome back' : 'Create an account';
+        document.getElementById('authModalSubtitle').textContent = isSignIn
+          ? 'Sign in to your AI Voice & Text Translator'
+          : 'Get started with your multilingual workspace';
+        document.getElementById('authErrorBanner').style.display = 'none';
+      },
+
+      toggleUserDropdown() {
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.classList.toggle('show');
+      },
+
+      closeUserDropdown() {
+        document.getElementById('userDropdown').classList.remove('show');
+      },
+
+      showBackendModal() {
+        document.getElementById('backendUrlInput').value = getActiveBackendUrl();
+        document.getElementById('backendModal').classList.add('show');
+      },
+
+      closeBackendModal() {
+        document.getElementById('backendModal').classList.remove('show');
+      },
+
+      syncBackendUrlDisplay() {
+        const url = getActiveBackendUrl();
+        const label = document.getElementById('backendStatusLabel');
+        if (!url) {
+          label.textContent = 'Backend: Same Origin';
+        } else {
+          try {
+            const parsed = new URL(url);
+            label.textContent = `Backend: ${parsed.host}`;
+          } catch {
+            label.textContent = 'Backend: Custom';
+          }
+        }
+      },
+
+      showLegalModal(type) {
+        const modal = document.getElementById('legalModal');
+        const title = document.getElementById('legalModalTitle');
+        const body = document.getElementById('legalModalBody');
+
+        if (type === 'terms') {
+          title.textContent = 'Terms of Service';
+          body.innerHTML = `
+            <p><strong>1. Acceptance of Terms:</strong> By accessing and using AI Voice &amp; Text Translator, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you may not use the Service.</p><br>
+            <p><strong>2. Description of Service:</strong> The Service provides real-time text translation and voice transcription capabilities across English, Telugu, Hindi, Tamil, and Malayalam.</p><br>
+            <p><strong>3. User Accounts &amp; Security:</strong> You are responsible for maintaining the confidentiality of your credentials and all activities occurring under your account.</p><br>
+            <p><strong>4. Intellectual Property:</strong> You retain ownership of your text and audio inputs. The Service grants you a license to use generated translations.</p><br>
+            <p><strong>5. Disclaimer:</strong> Automated AI translations and speech recognition may not always be 100% accurate. The Service is provided "as is" without warranty of any kind.</p>
+          `;
+        } else {
+          title.textContent = 'Privacy Policy';
+          body.innerHTML = `
+            <p><strong>1. Information Collected:</strong> We process account registration details (name, email, password hash) and submitted text and voice audio solely to fulfill your translation requests.</p><br>
+            <p><strong>2. Audio &amp; Text Processing:</strong> Text and audio recordings are transmitted securely via HTTPS to server-side translation and transcription models (Groq Llama &amp; Whisper).</p><br>
+            <p><strong>3. Cookies:</strong> Essential session cookies (<code>app-session</code>) are used exclusively for authentication.</p><br>
+            <p><strong>4. Data Security:</strong> Passwords are encrypted with bcrypt (12 rounds) and secrets are strictly retained on the backend.</p>
+          `;
+        }
+        modal.classList.add('show');
+      },
+
+      closeLegalModal() {
+        document.getElementById('legalModal').classList.remove('show');
+      },
+
+      // ─── Event Bindings ─────────────────────────────────────────────────────
+      bindEvents() {
+        // Textarea input & counter
+        const textarea = document.getElementById('inputTextarea');
+        textarea.addEventListener('input', (e) => {
+          this.setInputText(e.target.value);
+        });
+
+        // Enter key to translate (Shift+Enter for newline)
+        textarea.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.translate();
+          }
+        });
+
+        // PROCEED Button
+        document.getElementById('proceedBtn').addEventListener('click', () => {
+          this.translate();
+        });
+
+        // Target language change
+        document.getElementById('targetLangSelect').addEventListener('change', (e) => {
+          this.targetLanguage = e.target.value;
+          // If translation already exists, re-translate
+          if (this.inputText.trim()) {
+            this.translate();
+          }
+        });
+
+        // Voice output toggle
+        document.getElementById('voiceOutputToggleBtn').addEventListener('click', () => {
+          this.toggleVoiceOutput();
+        });
+
+        // Mic toggle
+        document.getElementById('toggleMicBtn').addEventListener('click', () => {
+          this.toggleMicrophone();
+        });
+
+        // Clear buttons
+        document.getElementById('clearInputBtn').addEventListener('click', () => this.clearInput());
+        document.getElementById('clearOutputBtn').addEventListener('click', () => this.clearOutput());
+        document.getElementById('resetAllBtn').addEventListener('click', () => this.resetAll());
+
+        // Play / Stop TTS
+        document.getElementById('playTtsBtn').addEventListener('click', () => this.handleSpeakControl());
+        document.getElementById('stopTtsBtn').addEventListener('click', () => this.stopSpeech());
+
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', () => this.copyOutput());
+
+        // Auth Navigation triggers
+        document.getElementById('navSignInBtn').addEventListener('click', () => this.showAuthModal('signin'));
+        document.getElementById('navSignUpBtn').addEventListener('click', () => this.showAuthModal('register'));
+        document.getElementById('closeAuthModalBtn').addEventListener('click', () => this.closeAuthModal());
+        document.getElementById('tabSignIn').addEventListener('click', () => this.switchAuthTab('signin'));
+        document.getElementById('tabRegister').addEventListener('click', () => this.switchAuthTab('register'));
+
+        // User Menu dropdown toggle
+        document.getElementById('userMenuToggleBtn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleUserDropdown();
+        });
+        document.addEventListener('click', (e) => {
+          const wrapper = document.getElementById('authNav');
+          if (!wrapper.contains(e.target)) {
+            this.closeUserDropdown();
+          }
+        });
+        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+
+        // Backend Settings Modal
+        document.getElementById('backendPillBtn').addEventListener('click', () => this.showBackendModal());
+        document.getElementById('editBackendLink').addEventListener('click', (e) => {
+          e.preventDefault();
+          this.showBackendModal();
+        });
+        document.getElementById('footerBackendLink').addEventListener('click', () => this.showBackendModal());
+        document.getElementById('closeBackendModalBtn').addEventListener('click', () => this.closeBackendModal());
+
+        document.getElementById('saveBackendUrlBtn').addEventListener('click', async () => {
+          const newUrl = document.getElementById('backendUrlInput').value.trim();
+          setActiveBackendUrl(newUrl);
+          this.syncBackendUrlDisplay();
+          this.closeBackendModal();
+
+          // Test connection
+          document.getElementById('backendDot').className = 'backend-dot connecting';
+          try {
+            await this.request('/api/auth/me', { method: 'GET' });
+            this.hideConnectionWarning();
+          } catch {
+            // Already flagged by request()
+          }
+        });
+
+        document.getElementById('resetBackendUrlBtn').addEventListener('click', () => {
+          document.getElementById('backendUrlInput').value = VERCEL_PRODUCTION_URL;
+          setActiveBackendUrl(VERCEL_PRODUCTION_URL);
+          this.syncBackendUrlDisplay();
+          this.closeBackendModal();
+        });
+
+        // Legal Modals
+        document.getElementById('footerTermsLink').addEventListener('click', () => this.showLegalModal('terms'));
+        document.getElementById('footerPrivacyLink').addEventListener('click', () => this.showLegalModal('privacy'));
+        document.getElementById('closeLegalModalBtn').addEventListener('click', () => this.closeLegalModal());
+
+        // Close modals on overlay backdrop click
+        ['authModal', 'backendModal', 'legalModal'].forEach((id) => {
+          const modal = document.getElementById(id);
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('show');
+          });
+        });
+
+        // ─── Sign In Form Submit ───────────────────────────────────────────────
+        document.getElementById('signInForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('loginEmail').value.trim();
+          const password = document.getElementById('loginPassword').value.trim();
+          const errBanner = document.getElementById('authErrorBanner');
+          const errText = document.getElementById('authErrorText');
+          const submitBtn = document.getElementById('submitLoginBtn');
+          const label = document.getElementById('submitLoginLabel');
+          const arrow = document.getElementById('submitLoginArrow');
+          const spinner = document.getElementById('submitLoginSpinner');
+
+          errBanner.style.display = 'none';
+          submitBtn.disabled = true;
+          label.textContent = 'Signing in...';
+          arrow.style.display = 'none';
+          spinner.style.display = 'inline-block';
+
+          try {
+            const res = await this.request('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+              throw new Error(data.error || 'Authentication failed. Please verify your credentials.');
+            }
+
+            if (data.token) {
+              SafeStorage.setItem('ai_translator_token', data.token);
+            }
+            this.setUser(data.user);
+            this.closeAuthModal();
+            this.hideConnectionWarning();
+          } catch (err) {
+            errText.textContent = err.message || 'Unable to sign in. Please check backend connection.';
+            errBanner.style.display = 'flex';
+          } finally {
+            submitBtn.disabled = false;
+            label.textContent = 'Sign In';
+            arrow.style.display = 'inline-block';
+            spinner.style.display = 'none';
+          }
+        });
+
+        // ─── Register Form Submit ─────────────────────────────────────────────
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = document.getElementById('regName').value.trim();
+          const email = document.getElementById('regEmail').value.trim();
+          const password = document.getElementById('regPassword').value.trim();
+          const confirmPassword = document.getElementById('regConfirmPassword').value.trim();
+          const errBanner = document.getElementById('authErrorBanner');
+          const errText = document.getElementById('authErrorText');
+          const submitBtn = document.getElementById('submitRegBtn');
+          const label = document.getElementById('submitRegLabel');
+          const arrow = document.getElementById('submitRegArrow');
+          const spinner = document.getElementById('submitRegSpinner');
+
+          errBanner.style.display = 'none';
+
+          if (password !== confirmPassword) {
+            errText.textContent = 'Passwords do not match.';
+            errBanner.style.display = 'flex';
+            return;
+          }
+
+          if (password.length < 6) {
+            errText.textContent = 'Password must be at least 6 characters.';
+            errBanner.style.display = 'flex';
+            return;
+          }
+
+          submitBtn.disabled = true;
+          label.textContent = 'Creating account...';
+          arrow.style.display = 'none';
+          spinner.style.display = 'inline-block';
+
+          try {
+            const res = await this.request('/api/auth/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, email, password })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+              throw new Error(data.error || 'Registration failed. Please try again.');
+            }
+
+            if (data.token) {
+              SafeStorage.setItem('ai_translator_token', data.token);
+            }
+            this.setUser(data.user);
+            this.closeAuthModal();
+            this.hideConnectionWarning();
+          } catch (err) {
+            errText.textContent = err.message || 'Unable to create account. Please check backend connection.';
+            errBanner.style.display = 'flex';
+          } finally {
+            submitBtn.disabled = false;
+            label.textContent = 'Create Account';
+            arrow.style.display = 'inline-block';
+            spinner.style.display = 'none';
+          }
+        });
+      }
+    };
+
+    // Initialize application when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>

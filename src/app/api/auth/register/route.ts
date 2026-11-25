@@ -59,6 +59,7 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
       },
+      token,
     });
   } catch (error) {
     console.error('[Register API Error]:', error);
