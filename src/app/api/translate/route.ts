@@ -2,17 +2,25 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { groqService } from '@/lib/ai/groq';
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from '@/types';
+import { getCorsHeaders, handleOptionsPreflight } from '@/lib/cors';
 
 const TIMEOUT_MS = 15000; // 15-second server timeout
 
+export async function OPTIONS(request: Request) {
+  return handleOptionsPreflight(request);
+}
+
 export async function POST(request: Request) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   try {
     // 1. Session Protection
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
         { success: false, error: 'Authentication required. Please log in.' },
-        { status: 401 }
+        { status: 401, headers: corsHeaders }
       );
     }
 
@@ -23,7 +31,7 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json(
         { success: false, error: 'Invalid request body.' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -32,7 +40,7 @@ export async function POST(request: Request) {
     if (!text || typeof text !== 'string' || !text.trim()) {
       return NextResponse.json(
         { success: false, error: 'Please enter valid text to translate.' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -41,7 +49,7 @@ export async function POST(request: Request) {
     if (trimmedText.length > 5000) {
       return NextResponse.json(
         { success: false, error: 'Text exceeds maximum limit of 5000 characters.' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -51,7 +59,7 @@ export async function POST(request: Request) {
           success: false,
           error: `Target language must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`,
         },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -77,7 +85,7 @@ export async function POST(request: Request) {
           success: false,
           error: 'Please enter or speak a longer phrase so the language can be identified accurately.',
         },
-        { status: 422 }
+        { status: 422, headers: corsHeaders }
       );
     }
 
@@ -93,16 +101,19 @@ export async function POST(request: Request) {
           success: false,
           error: `The source language ('${result.detectedLanguage}') is not currently supported. Please enter text in English, Telugu, Hindi, Tamil, or Malayalam.`,
         },
-        { status: 422 }
+        { status: 422, headers: corsHeaders }
       );
     }
 
     // 6. Public Response (Strictly ONLY detectedLanguage and translatedText)
-    return NextResponse.json({
-      success: true,
-      detectedLanguage: matchedSupported,
-      translatedText: result.translatedText,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        detectedLanguage: matchedSupported,
+        translatedText: result.translatedText,
+      },
+      { status: 200, headers: corsHeaders }
+    );
   } catch (error: any) {
     console.error('[Translation Route Error]:', error.message || 'Error executing translation');
 
@@ -112,7 +123,7 @@ export async function POST(request: Request) {
         success: false,
         error: error.message || 'Unable to translate right now. Please try again.',
       },
-      { status }
+      { status, headers: corsHeaders }
     );
   }
 }

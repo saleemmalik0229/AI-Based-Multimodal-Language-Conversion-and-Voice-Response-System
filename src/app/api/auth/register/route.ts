@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { hashPassword, signSessionToken, setSessionCookie } from '@/lib/auth';
+import { getCorsHeaders, handleOptionsPreflight } from '@/lib/cors';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -9,7 +10,14 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+export async function OPTIONS(request: Request) {
+  return handleOptionsPreflight(request);
+}
+
 export async function POST(request: Request) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   try {
     const body = await request.json();
     const validation = registerSchema.safeParse(body);
@@ -17,7 +25,7 @@ export async function POST(request: Request) {
     if (!validation.success) {
       return NextResponse.json(
         { success: false, error: validation.error.errors[0].message },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -31,7 +39,7 @@ export async function POST(request: Request) {
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: 'An account with this email already exists' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -52,20 +60,23 @@ export async function POST(request: Request) {
 
     await setSessionCookie(token);
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
+    return NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        token,
       },
-      token,
-    });
+      { status: 200, headers: corsHeaders }
+    );
   } catch (error) {
     console.error('[Register API Error]:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to create account. Please try again.' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

@@ -1898,157 +1898,143 @@
     // ============================================================================
     // 3. TEXT-TO-SPEECH (TTS) MANAGER (Exact Web Speech API Abstraction)
     // ============================================================================
+    // 3. TEXT-TO-SPEECH (TTS) MANAGER — Server-Side Cloud Audio Engine
+    // Supports all 5 languages (English, Telugu, Hindi, Tamil, Malayalam)
+    // without requiring operating-system language packs.
+    // ============================================================================
     class TTSManager {
       constructor() {
-        this.synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
-        this.playbackState = 'idle'; // 'idle' | 'speaking' | 'paused'
-        this.currentUtterance = null;
-        if (this.synth) {
-          this.synth.getVoices();
-        }
+        this.audioElement = null;
+        this.playbackState = 'idle'; // 'idle' | 'loading' | 'speaking' | 'paused'
+        this.abortController = null;
       }
 
       static LANG_MAP = {
-        English: 'en-US',
+        English: 'en-IN',
         Telugu: 'te-IN',
         Hindi: 'hi-IN',
         Tamil: 'ta-IN',
         Malayalam: 'ml-IN'
       };
 
-      static NO_SILENT_FALLBACK = new Set(['Telugu', 'Tamil', 'Malayalam', 'Hindi']);
-
       isSupported() {
-        return this.synth !== null;
+        return typeof Audio !== 'undefined';
       }
 
       getState() {
         return this.playbackState;
       }
 
-      getVoicesAsync() {
-        return new Promise((resolve) => {
-          if (!this.synth) return resolve([]);
-          const voices = this.synth.getVoices();
-          if (voices.length > 0) return resolve(voices);
-
-          const onVoicesChanged = () => {
-            this.synth.removeEventListener('voiceschanged', onVoicesChanged);
-            resolve(this.synth.getVoices());
-          };
-          this.synth.addEventListener('voiceschanged', onVoicesChanged);
-
-          setTimeout(() => {
-            this.synth.removeEventListener('voiceschanged', onVoicesChanged);
-            resolve(this.synth.getVoices());
-          }, 1500);
-        });
+      hasVoiceForLanguage(_languageName) {
+        // Cloud TTS natively supports all 5 languages without device packs
+        return true;
       }
 
-      findVoice(voices, langCode) {
-        const lower = langCode.toLowerCase();
-        const baseLang = lower.split('-')[0];
-        const exact = voices.find((v) => v.lang.toLowerCase() === lower);
-        if (exact) return exact;
-        const prefix = voices.find((v) => v.lang.toLowerCase().startsWith(baseLang));
-        if (prefix) return prefix;
-        return null;
-      }
-
-      speak(text, languageName = 'English', onEnd, onError, onStateChange) {
-        if (!this.synth) {
-          onError?.('Speech playback is not supported in this browser.');
+      async speak(text, languageName = 'English', onEnd, onError, onStateChange) {
+        if (!this.isSupported()) {
+          onError?.('Audio playback is not supported in this browser.');
           return false;
         }
         if (!text || !text.trim()) return false;
 
         this.stop();
-        const langCode = TTSManager.LANG_MAP[languageName] || 'en-US';
+        this.playbackState = 'loading';
+        onStateChange?.('loading');
 
-        this.playbackState = 'speaking';
-        onStateChange?.('speaking');
+        this.abortController = new AbortController();
 
-        this.getVoicesAsync().then((voices) => {
-          if (this.playbackState !== 'speaking') return;
+        try {
+          const res = await App.request('/api/text-to-speech', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              text: text.trim(),
+              language: languageName
+            }),
+            signal: this.abortController.signal
+          });
 
-          const matchedVoice = voices.length > 0 ? this.findVoice(voices, langCode) : null;
+          const data = await res.json().catch(() => ({}));
 
-          if (voices.length > 0 && matchedVoice === null && TTSManager.NO_SILENT_FALLBACK.has(languageName)) {
-            this.playbackState = 'idle';
-            onStateChange?.('idle');
-            onError?.(
-              `No ${languageName} voice is installed on this device. To enable ${languageName} speech, install a ${languageName} language pack in your OS settings. The translation text is shown above.`
-            );
-            return;
+          if (!res.ok || !data.success || !data.audioContent) {
+            throw new Error(data.error || `Voice synthesis failed (HTTP ${res.status}).`);
           }
 
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = langCode;
-          utterance.rate = 0.92;
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-
-          if (matchedVoice) {
-            utterance.voice = matchedVoice;
+          if (this.playbackState !== 'loading') {
+            return false;
           }
 
-          utterance.onstart = () => {
+          const audioSrc = `data:${data.mimeType || 'audio/mp3'};base64,${data.audioContent}`;
+          const audio = new Audio(audioSrc);
+          this.audioElement = audio;
+
+          audio.onplay = () => {
             this.playbackState = 'speaking';
             onStateChange?.('speaking');
           };
 
-          utterance.onend = () => {
+          audio.onpause = () => {
+            if (!audio.ended && this.playbackState !== 'idle') {
+              this.playbackState = 'paused';
+              onStateChange?.('paused');
+            }
+          };
+
+          audio.onended = () => {
             this.playbackState = 'idle';
-            this.currentUtterance = null;
+            this.audioElement = null;
             onStateChange?.('idle');
             onEnd?.();
           };
 
-          utterance.onerror = (e) => {
+          audio.onerror = () => {
             this.playbackState = 'idle';
-            this.currentUtterance = null;
+            this.audioElement = null;
             onStateChange?.('idle');
-            if (e.error !== 'interrupted' && e.error !== 'canceled') {
-              onError?.(`Speech playback error (${e.error || 'unknown'}). You can still read the translation.`);
-            } else {
-              onEnd?.();
-            }
+            onError?.('Audio playback failed in browser.');
           };
 
-          try {
-            this.currentUtterance = utterance;
-            this.synth.speak(utterance);
-          } catch {
-            this.playbackState = 'idle';
-            this.currentUtterance = null;
-            onStateChange?.('idle');
-            onError?.('Failed to start speech playback. Please try again.');
+          await audio.play();
+          return true;
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            return false;
           }
-        });
-
-        return true;
+          this.playbackState = 'idle';
+          this.audioElement = null;
+          onStateChange?.('idle');
+          onError?.(err.message || 'Speech generation encountered an issue.');
+          return false;
+        }
       }
 
       pause() {
-        if (this.synth && this.playbackState === 'speaking') {
-          this.synth.pause();
+        if (this.audioElement && this.playbackState === 'speaking') {
+          this.audioElement.pause();
           this.playbackState = 'paused';
         }
       }
 
       resume() {
-        if (this.synth && this.playbackState === 'paused') {
-          this.synth.resume();
+        if (this.audioElement && this.playbackState === 'paused') {
+          this.audioElement.play().catch(() => {});
           this.playbackState = 'speaking';
         }
       }
 
       stop() {
-        if (this.synth) {
-          this.synth.cancel();
+        if (this.abortController) {
+          this.abortController.abort();
+          this.abortController = null;
+        }
+        if (this.audioElement) {
+          this.audioElement.pause();
+          this.audioElement.currentTime = 0;
+          this.audioElement = null;
         }
         this.playbackState = 'idle';
-        this.currentUtterance = null;
       }
     }
 
@@ -2187,7 +2173,7 @@
       recordingSeconds: 0,
       recordingTimerId: null,
 
-      init() {
+      async init() {
         ThemeManager.init();
 
         this.ttsManager = new TTSManager();
@@ -2205,11 +2191,16 @@
           document.getElementById('ttsUnsupportedBanner').style.display = 'flex';
           document.getElementById('voiceOutputToggleBtn').disabled = true;
           document.getElementById('playTtsBtn').disabled = true;
+        } else {
+          document.getElementById('ttsUnsupportedBanner').style.display = 'none';
+          document.getElementById('voiceOutputToggleBtn').disabled = false;
+          document.getElementById('playTtsBtn').disabled = false;
         }
 
         this.bindEvents();
         this.syncBackendUrlDisplay();
-        this.checkAuthSession();
+        await this.checkBackendHealth();
+        await this.checkAuthSession();
       },
 
       // ─── Network & CORS Helper ──────────────────────────────────────────────
@@ -2243,13 +2234,44 @@
         } catch (err) {
           // If fetch throws TypeError (Failed to fetch), usually CORS or backend offline
           console.error(`[API Network Error on ${url}]:`, err);
-          const isNetworkError = err.message?.includes('Failed to fetch') || err.name === 'TypeError';
+          const isNetworkError =
+            err.name === 'TypeError' ||
+            (err.message && (
+              err.message.includes('Failed to fetch') ||
+              err.message.includes('NetworkError') ||
+              err.message.includes('Load failed')
+            ));
+
           if (isNetworkError) {
             this.showConnectionWarning(
               `Could not reach backend at ${baseUrl || 'current origin'}. Ensure the backend is live and CORS allows https://www.web-a2z.com.`
             );
           }
           throw err;
+        }
+      },
+
+      async checkBackendHealth() {
+        const baseUrl = getActiveBackendUrl();
+        const dot = document.getElementById('backendDot');
+        if (dot) dot.className = 'backend-dot connecting';
+
+        try {
+          const res = await this.request('/api/health', { method: 'GET' });
+          if (res.ok) {
+            const data = await res.json();
+            this.hideConnectionWarning();
+            if (dot) dot.className = 'backend-dot';
+            return { ok: true, data };
+          } else {
+            const errMsg = `Backend health check failed with HTTP ${res.status} (${res.statusText || 'Error'}).`;
+            this.showConnectionWarning(errMsg);
+            return { ok: false, error: errMsg };
+          }
+        } catch (err) {
+          const errMsg = `Could not reach backend at ${baseUrl || 'current origin'}. Check network and ensure CORS allows https://www.web-a2z.com.`;
+          this.showConnectionWarning(errMsg);
+          return { ok: false, error: errMsg };
         }
       },
 
@@ -2274,7 +2296,6 @@
             const data = await res.json();
             if (data.authenticated && data.user) {
               this.setUser(data.user);
-              this.hideConnectionWarning();
               return;
             }
           }
@@ -2623,6 +2644,8 @@
         } else if (state === 'paused') {
           this.ttsManager.resume();
           this.updateTtsUi('speaking');
+        } else if (state === 'loading') {
+          this.stopSpeech();
         } else {
           this.clearTtsError();
           this.speakTranslation(this.translatedText, this.targetLanguage);
@@ -2646,7 +2669,13 @@
 
         playBtn.className = 'btn-play ' + state;
 
-        if (state === 'speaking') {
+        if (state === 'loading') {
+          playLabel.textContent = 'Loading...';
+          stopBtn.style.display = 'inline-flex';
+          statusLabel.textContent = 'Generating Voice...';
+          statusLabel.style.display = 'inline';
+          pulseIndicator.style.display = 'inline-flex';
+        } else if (state === 'speaking') {
           playLabel.textContent = 'Pause';
           stopBtn.style.display = 'inline-flex';
           statusLabel.textContent = 'Speaking...';
@@ -2953,21 +2982,20 @@
           this.syncBackendUrlDisplay();
           this.closeBackendModal();
 
-          // Test connection
-          document.getElementById('backendDot').className = 'backend-dot connecting';
-          try {
-            await this.request('/api/auth/me', { method: 'GET' });
-            this.hideConnectionWarning();
-          } catch {
-            // Already flagged by request()
-          }
+          // Test connection to /api/health
+          await this.checkBackendHealth();
+          await this.checkAuthSession();
         });
 
-        document.getElementById('resetBackendUrlBtn').addEventListener('click', () => {
+        document.getElementById('resetBackendUrlBtn').addEventListener('click', async () => {
           document.getElementById('backendUrlInput').value = VERCEL_PRODUCTION_URL;
           setActiveBackendUrl(VERCEL_PRODUCTION_URL);
           this.syncBackendUrlDisplay();
           this.closeBackendModal();
+
+          // Re-test connection
+          await this.checkBackendHealth();
+          await this.checkAuthSession();
         });
 
         // Legal Modals

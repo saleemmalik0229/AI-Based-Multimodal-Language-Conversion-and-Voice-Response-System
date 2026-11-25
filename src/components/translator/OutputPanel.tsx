@@ -67,6 +67,15 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
 
   // Playback button config
   const getPlayButtonConfig = () => {
+    if (ttsState === 'loading') {
+      return {
+        label: 'Loading...',
+        icon: <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)]" />,
+        className:
+          'bg-[var(--surface-elevated)] text-[var(--accent)] border-[var(--border)] cursor-wait shadow-sm',
+        title: 'Generating speech audio...',
+      };
+    }
     if (ttsState === 'speaking') {
       return {
         label: 'Pause',
@@ -97,7 +106,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
 
   const playConfig = getPlayButtonConfig();
   const canPlay = !!translatedText && !isLoading && isTtsSupported;
-  const isActivelyPlaying = ttsState === 'speaking' || ttsState === 'paused';
+  const isActivelyPlaying = ttsState === 'speaking' || ttsState === 'paused' || ttsState === 'loading';
 
   return (
     <div className="h-full flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-sm transition-colors duration-150">

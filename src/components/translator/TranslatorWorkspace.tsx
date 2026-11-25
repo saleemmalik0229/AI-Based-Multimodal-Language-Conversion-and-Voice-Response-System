@@ -42,10 +42,10 @@ export const TranslatorWorkspace: React.FC = () => {
     recorderRef.current = new AudioRecorder();
     ttsRef.current = new TTSManager();
 
-    // Check mic support
+    // Check mic and audio support
     if (typeof window !== 'undefined') {
       setIsMicSupported(!!navigator.mediaDevices?.getUserMedia);
-      setIsTtsSupported('speechSynthesis' in window);
+      setIsTtsSupported(typeof Audio !== 'undefined');
     }
 
     return () => {
@@ -245,6 +245,8 @@ export const TranslatorWorkspace: React.FC = () => {
     } else if (ttsState === 'paused') {
       ttsRef.current.resume();
       setTtsState('speaking');
+    } else if (ttsState === 'loading') {
+      stopSpeech();
     } else {
       // idle → speak
       setTtsError(null);
