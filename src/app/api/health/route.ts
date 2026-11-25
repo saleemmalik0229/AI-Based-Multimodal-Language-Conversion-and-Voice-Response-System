@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     version: '1.0.0',
     cors: {
       allowedOrigin: corsHeaders['Access-Control-Allow-Origin'],
-      credentials: true,
+      credentials: corsHeaders['Access-Control-Allow-Credentials'] === 'true',
     },
   };
 

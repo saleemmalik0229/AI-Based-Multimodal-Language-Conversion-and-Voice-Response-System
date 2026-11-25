@@ -1797,9 +1797,15 @@
     // Helper to get active backend URL (allows runtime override via Backend Settings modal)
     function getActiveBackendUrl() {
       // 1. Check for manual override stored via the Settings modal
-      const stored = SafeStorage.getItem('ai_translator_backend_url');
+      let stored = SafeStorage.getItem('ai_translator_backend_url');
       if (stored !== null && stored !== undefined && stored.trim() !== '') {
-        return stored.trim().replace(/\/+$/, '');
+        const cleaned = stored.trim().replace(/\/+$/, '');
+        // Purge legacy/broken URLs that rate-limit with 429
+        if (cleaned.includes('ai-voice-translator.vercel.app') && !cleaned.includes('ai-voice-translator-three')) {
+          SafeStorage.removeItem('ai_translator_backend_url');
+        } else {
+          return cleaned;
+        }
       }
 
       // 2. Auto-detect origin context:
@@ -1810,19 +1816,18 @@
         // When hosted directly on the Vercel production deployment, use relative same-origin API requests:
         if (
           origin === VERCEL_PRODUCTION_URL ||
-          hostname.endsWith('.vercel.app') ||
-          hostname === 'ai-voice-translator-three.vercel.app'
+          (hostname && (hostname.endsWith('.vercel.app') || hostname === 'ai-voice-translator-three.vercel.app'))
         ) {
           return '';
         }
 
         // When hosted on Web-A2Z, use the Vercel production URL as the API base URL:
-        if (hostname.includes('web-a2z.com')) {
+        if (hostname && (hostname.includes('web-a2z.com') || hostname === 'web-a2z.com')) {
           return VERCEL_PRODUCTION_URL;
         }
       }
 
-      // 3. Default fallback for Web-A2Z, local file://, or preview frames:
+      // 3. Default fallback for Web-A2Z, sandboxed frames, or preview:
       return VERCEL_PRODUCTION_URL;
     }
 
@@ -2208,14 +2213,22 @@
         const baseUrl = getActiveBackendUrl();
         const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
 
+        let isSameOrigin = false;
+        try {
+          isSameOrigin = !baseUrl || (window.location && window.location.origin === baseUrl);
+        } catch {
+          isSameOrigin = false;
+        }
+
         const defaultHeaders = {};
         const token = SafeStorage.getItem('ai_translator_token');
-        if (token) {
+        if (token && !options.skipAuth) {
           defaultHeaders['Authorization'] = `Bearer ${token}`;
         }
 
         const defaultOptions = {
-          credentials: 'include', // Sends HTTP-only session cookie 'app-session'
+          mode: 'cors',
+          credentials: options.credentials || (isSameOrigin ? 'include' : 'omit'),
           headers: defaultHeaders
         };
 
@@ -2242,9 +2255,9 @@
               err.message.includes('Load failed')
             ));
 
-          if (isNetworkError) {
+          if (isNetworkError && !options.silent) {
             this.showConnectionWarning(
-              `Could not reach backend at ${baseUrl || 'current origin'}. Ensure the backend is live and CORS allows https://www.web-a2z.com.`
+              `Could not reach backend at ${baseUrl || 'current origin'}. Ensure the backend is deployed and CORS allows requests.`
             );
           }
           throw err;
@@ -2257,7 +2270,13 @@
         if (dot) dot.className = 'backend-dot connecting';
 
         try {
-          const res = await this.request('/api/health', { method: 'GET' });
+          // Dedicated health check using simple CORS request without extra auth headers
+          const res = await this.request('/api/health', {
+            method: 'GET',
+            credentials: 'omit',
+            skipAuth: true,
+            silent: true
+          });
           if (res.ok) {
             const data = await res.json();
             this.hideConnectionWarning();
@@ -2269,7 +2288,7 @@
             return { ok: false, error: errMsg };
           }
         } catch (err) {
-          const errMsg = `Could not reach backend at ${baseUrl || 'current origin'}. Check network and ensure CORS allows https://www.web-a2z.com.`;
+          const errMsg = `Could not reach backend at ${baseUrl || 'current origin'}. Ensure the backend is deployed and CORS allows requests.`;
           this.showConnectionWarning(errMsg);
           return { ok: false, error: errMsg };
         }
@@ -2278,20 +2297,23 @@
       showConnectionWarning(message) {
         const banner = document.getElementById('connectionWarningBanner');
         const text = document.getElementById('connectionWarningText');
-        text.textContent = message;
-        banner.style.display = 'flex';
-        document.getElementById('backendDot').className = 'backend-dot disconnected';
+        if (text) text.textContent = message;
+        if (banner) banner.style.display = 'flex';
+        const dot = document.getElementById('backendDot');
+        if (dot) dot.className = 'backend-dot disconnected';
       },
 
       hideConnectionWarning() {
-        document.getElementById('connectionWarningBanner').style.display = 'none';
-        document.getElementById('backendDot').className = 'backend-dot';
+        const banner = document.getElementById('connectionWarningBanner');
+        if (banner) banner.style.display = 'none';
+        const dot = document.getElementById('backendDot');
+        if (dot) dot.className = 'backend-dot';
       },
 
       // ─── Auth Session ───────────────────────────────────────────────────────
       async checkAuthSession() {
         try {
-          const res = await this.request('/api/auth/me', { method: 'GET' });
+          const res = await this.request('/api/auth/me', { method: 'GET', silent: true });
           if (res.ok) {
             const data = await res.json();
             if (data.authenticated && data.user) {

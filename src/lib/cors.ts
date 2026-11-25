@@ -2,33 +2,52 @@ import { NextResponse } from 'next/server';
 
 export const ALLOWED_ORIGIN = 'https://www.web-a2z.com';
 
-const ALLOWED_ORIGINS = [
+const ALLOWED_ORIGINS = new Set([
   'https://www.web-a2z.com',
+  'https://web-a2z.com',
   'https://ai-voice-translator-three.vercel.app',
-];
+  'null', // Required for Web-A2Z sandboxed CSP execution
+]);
 
 export function getCorsHeaders(origin: string | null = null): Record<string, string> {
   let allowOrigin = ALLOWED_ORIGIN;
+  let allowCredentials = 'true';
 
   if (origin) {
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      allowOrigin = origin;
+    const trimmedOrigin = origin.trim();
+    if (
+      ALLOWED_ORIGINS.has(trimmedOrigin) ||
+      trimmedOrigin.endsWith('.web-a2z.com') ||
+      trimmedOrigin.endsWith('web-a2z.com')
+    ) {
+      allowOrigin = trimmedOrigin;
     } else if (
       process.env.NODE_ENV !== 'production' &&
-      (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1'))
+      (trimmedOrigin.startsWith('http://localhost') || trimmedOrigin.startsWith('http://127.0.0.1'))
     ) {
-      allowOrigin = origin;
+      allowOrigin = trimmedOrigin;
     }
   }
 
-  return {
+  // Under W3C Fetch specification:
+  // Access-Control-Allow-Credentials cannot be 'true' when Access-Control-Allow-Origin is 'null' or '*'
+  if (allowOrigin === 'null' || allowOrigin === '*') {
+    allowCredentials = 'false';
+  }
+
+  const headers: Record<string, string> = {
     'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE, PATCH',
     'Access-Control-Allow-Headers':
       'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization',
     'Access-Control-Max-Age': '86400',
   };
+
+  if (allowCredentials === 'true') {
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+
+  return headers;
 }
 
 export function applyCorsHeaders<T extends Response | NextResponse>(
