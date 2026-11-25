@@ -34,16 +34,32 @@ export async function GET(request: Request) {
     DATABASE_URL: !!process.env.DATABASE_URL,
     JWT_SECRET: !!process.env.JWT_SECRET,
     GROQ_API_KEY: !!process.env.GROQ_API_KEY,
-    GOOGLE_CLOUD_PROJECT_ID: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
-    GOOGLE_CLOUD_TTS_CREDENTIALS: !!process.env.GOOGLE_CLOUD_TTS_CREDENTIALS,
+    GROQ_STT_MODEL: !!process.env.GROQ_STT_MODEL,
+    GROQ_TRANSLATION_MODEL: !!process.env.GROQ_TRANSLATION_MODEL,
   };
 
   const apis = {
     health: true,
     translate: !!process.env.GROQ_API_KEY,
     speechToText: !!process.env.GROQ_API_KEY,
-    textToSpeech: true, // Google Cloud TTS / server fallback supports all 5 languages
+    textToSpeech: true, // Dedicated server-side TTS engine (supports te, en, hi, ta, ml)
     auth: dbStatus.connected && environment.DATABASE_URL,
+  };
+
+  const providers = {
+    translation: {
+      provider: 'Groq',
+      model: process.env.GROQ_TRANSLATION_MODEL || 'openai/gpt-oss-20b',
+    },
+    speechToText: {
+      provider: 'Groq Whisper',
+      model: process.env.GROQ_STT_MODEL || 'whisper-large-v3',
+    },
+    textToSpeech: {
+      engine: 'Server-Side Speech Engine',
+      supportedLanguages: ['English', 'Telugu', 'Hindi', 'Tamil', 'Malayalam'],
+      outputFormat: 'audio/mp3',
+    },
   };
 
   const isHealthy = dbStatus.connected && environment.GROQ_API_KEY;
@@ -57,6 +73,7 @@ export async function GET(request: Request) {
     database: dbStatus,
     environment,
     apis,
+    providers,
     version: '1.0.0',
     cors: {
       allowedOrigin: corsHeaders['Access-Control-Allow-Origin'],

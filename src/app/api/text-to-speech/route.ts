@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { synthesizeSpeech, resolveVoiceConfig } from '@/lib/speech/cloudTts';
+import { synthesizeSpeech, resolveTtsLanguage } from '@/lib/speech/serverTts';
 import { getCorsHeaders, handleOptionsPreflight } from '@/lib/cors';
 
 export async function OPTIONS(request: Request) {
@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const voiceConfig = resolveVoiceConfig(language);
-    if (!voiceConfig) {
+    const langConfig = resolveTtsLanguage(language);
+    if (!langConfig) {
       return NextResponse.json(
         {
           success: false,
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Synthesize Speech
+    // 3. Synthesize Speech via Dedicated Server-Side TTS Engine
     const result = await synthesizeSpeech(trimmedText, language);
 
     return NextResponse.json(
@@ -69,9 +69,10 @@ export async function POST(request: Request) {
         success: true,
         audioContent: result.audioBase64,
         mimeType: result.mimeType,
-        voiceName: result.voiceName,
+        language: result.language,
         languageCode: result.languageCode,
-        provider: result.provider,
+        engine: result.engine,
+        byteSize: result.byteSize,
       },
       { status: 200, headers: corsHeaders }
     );
